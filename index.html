@@ -273,8 +273,11 @@
                     <sc-if value="{{ task.isImage }}" hint-placeholder-val="{{ false }}">
                       <div>{{ task.imgEl }}</div>
                     </sc-if>
+                    <sc-if value="{{ task.hasVideoEmbed }}" hint-placeholder-val="{{ false }}">
+                      <div>{{ task.videoEl }}</div>
+                    </sc-if>
                     <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
-                      <sc-if value="{{ task.isVideo }}" hint-placeholder-val="{{ false }}">
+                      <sc-if value="{{ task.isVideoLink }}" hint-placeholder-val="{{ false }}">
                         <a href="{{ task.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#E6A98C;color:#fff;border-radius:13px;font-size:.84rem;font-weight:500;text-decoration:none;letter-spacing:.05em;">▶ 開啟影片</a>
                       </sc-if>
                       <sc-if value="{{ task.isLink }}" hint-placeholder-val="{{ false }}">
@@ -715,6 +718,15 @@ class Component extends DCLogic {
     setTimeout(()=>this.setState({batchMsg:""}),2800);
   }
 
+  // turn a YouTube / Google Drive share link into an embeddable player URL (else null)
+  videoEmbedUrl(url){
+    if(!url) return null;
+    let m;
+    if(m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/)) return `https://www.youtube.com/embed/${m[1]}`;
+    if(m = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/))   return `https://drive.google.com/file/d/${m[1]}/preview`;
+    if(m = url.match(/drive\.google\.com\/open\?id=([\w-]+)/))   return `https://drive.google.com/file/d/${m[1]}/preview`;
+    return null;
+  }
   buildModal(){
     const {selectedDate, done, dayNotes, tasksByDate, parentMode} = this.state;
     if(!selectedDate) return {show:false, tasks:[]};
@@ -740,10 +752,12 @@ class Component extends DCLogic {
       const cl = t.type==='video'?'看完了！':t.type==='audio'?'聽完了！':t.type==='link'?'看完了！':t.type==='image'?'看過了！':'完成';
       const audioEl = t.type==='audio' && t.url ? React.createElement('audio',{controls:true,src:t.url,style:{width:'100%',height:'36px'}}) : null;
       const imgEl = t.type==='image' && t.url ? React.createElement('img',{src:t.url,alt:'',style:{display:'block',maxWidth:'100%',borderRadius:'14px',margin:'2px 0 8px',border:'1.5px solid #EFE0D2'}}) : null;
+      const embed = t.type==='video' ? this.videoEmbedUrl(t.url) : null;
+      const videoEl = embed ? React.createElement('iframe',{src:embed,allow:'autoplay; encrypted-media; fullscreen',allowFullScreen:true,style:{width:'100%',aspectRatio:'16 / 9',border:'none',borderRadius:'14px',margin:'2px 0 8px',background:'#000'}}) : null;
       const editing = this.state.editingId===t.id;
       const pomoN = this.state.taskPomos[t.id]||0;
-      return { id:t.id, icon:t.icon||"📌", title:t.title, desc:t.desc||"", hasDesc:!!(t.desc&&t.desc.trim()), audioEl, imgEl,
-        url:t.url||"", slot:t.slot||"any", isVideo:t.type==='video', isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
+      return { id:t.id, icon:t.icon||"📌", title:t.title, desc:t.desc||"", hasDesc:!!(t.desc&&t.desc.trim()), audioEl, imgEl, videoEl,
+        url:t.url||"", slot:t.slot||"any", isVideo:t.type==='video', hasVideoEmbed:!!embed, isVideoLink:(t.type==='video'&&!embed&&!!t.url), isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
         showCheckRow:(t.type==='video'||t.type==='audio'||t.type==='link'||t.type==='image'),
         cardStyle: editing ? {...(isDone?cardDone:cardBase), border:'2px solid #D89B6E'} : (isDone?cardDone:cardBase),
         titleStyle, chkStyle:chk, bigChkStyle:bigChk, checkLabel:cl,
@@ -802,7 +816,7 @@ class Component extends DCLogic {
     const types=[['task','✏️ 任務'],['video','🎬 影片'],['audio','🎧 音檔'],['link','🔗 連結'],['image','🖼️ 圖片']];
     const typeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setType(k), style: nt.type===k?segActive:segIdle }));
     const needsUrl = nt.type==='video'||nt.type==='audio'||nt.type==='link';
-    const urlPh = nt.type==='video'?'YouTube / 影片網址':nt.type==='audio'?'音檔網址 (.mp3)':'網頁連結網址';
+    const urlPh = nt.type==='video'?'YouTube / Google Drive 影片連結':nt.type==='audio'?'音檔網址 (.mp3)':'網頁連結網址';
     // tappable icon palette
     const palIdle={width:'34px',height:'34px',border:'1.5px solid #EFE0D2',background:'#fff',borderRadius:'10px',fontSize:'1.15rem',cursor:'pointer',padding:'0',lineHeight:'1'};
     const palActive={...palIdle,border:'2px solid #D89B6E',background:'#FBF0E2'};
