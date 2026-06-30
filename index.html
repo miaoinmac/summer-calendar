@@ -243,6 +243,53 @@
           </div>
           </sc-if>
 
+          <!-- weekly tasks (do once anytime this week; stay until done) -->
+          <sc-if value="{{ modal.weeklyShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:14px;background:#FBF6EC;border:1.5px dashed #E3CFA6;border-radius:16px;padding:11px 13px;">
+              <div style="font-size:.82rem;font-weight:500;color:#B08A4F;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📌 本週任務<span style="font-size:.72rem;color:#B0A091;font-weight:400;">這週（{{ modal.weekRangeLabel }}）完成一次就好 · {{ modal.weeklyProgText }}</span></div>
+              <sc-for list="{{ modal.weeklyVals }}" as="task" hint-placeholder-count="0">
+                <div style="{{ task.cardStyle }}">
+                  <div style="font-size:1.2rem;flex-shrink:0;line-height:1;">{{ task.icon }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="{{ task.titleStyle }}">{{ task.title }}</div>
+                    <sc-if value="{{ task.hasDesc }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:.78rem;color:#A8978A;margin-bottom:3px;line-height:1.4;letter-spacing:.04em;">{{ task.desc }}</div>
+                    </sc-if>
+                    <sc-if value="{{ task.isImage }}" hint-placeholder-val="{{ false }}">
+                      <div>{{ task.imgEl }}</div>
+                    </sc-if>
+                    <sc-if value="{{ task.hasVideoEmbed }}" hint-placeholder-val="{{ false }}">
+                      <div>{{ task.videoEl }}</div>
+                    </sc-if>
+                    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
+                      <sc-if value="{{ task.isVideoLink }}" hint-placeholder-val="{{ false }}">
+                        <a href="{{ task.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#E6A98C;color:#fff;border-radius:13px;font-size:.84rem;font-weight:500;text-decoration:none;letter-spacing:.05em;">▶ 開啟影片</a>
+                      </sc-if>
+                      <sc-if value="{{ task.isLink }}" hint-placeholder-val="{{ false }}">
+                        <a href="{{ task.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#90A9B8;color:#fff;border-radius:13px;font-size:.84rem;font-weight:500;text-decoration:none;letter-spacing:.05em;">🔗 開啟連結</a>
+                      </sc-if>
+                      <sc-if value="{{ task.isAudio }}" hint-placeholder-val="{{ false }}">
+                        <div style="width:100%;">{{ task.audioEl }}</div>
+                      </sc-if>
+                      <sc-if value="{{ task.showCheckRow }}" hint-placeholder-val="{{ false }}">
+                        <div onClick="{{ task.onToggle }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;">
+                          <div style="{{ task.chkStyle }}">✓</div>
+                          <span style="font-size:.82rem;color:#A8978A;letter-spacing:.05em;">{{ task.checkLabel }}</span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ task.parentMode }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ task.onDelete }}" style="background:#FBEDE9;border:1.5px solid #EFCEC4;color:#C57E6B;border-radius:11px;padding:5px 11px;font-size:.78rem;cursor:pointer;letter-spacing:.05em;">🗑 刪除</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <sc-if value="{{ task.isTask }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ task.onToggle }}" style="{{ task.bigChkStyle }}">✓</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
           <!-- tasks -->
           <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:7px;display:flex;align-items:center;gap:6px;">🎯 今天的任務</div>
 
@@ -353,12 +400,18 @@
                   </sc-if>
                 </div>
               </sc-if>
-              <div style="font-size:.76rem;color:#B0A091;margin-bottom:6px;letter-spacing:.06em;">時段（小朋友可自己調整先後）</div>
-              <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;">
-                <sc-for list="{{ slotBtns }}" as="b" hint-placeholder-count="4">
-                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
-                </sc-for>
-              </div>
+              <sc-if value="{{ draftCanWeekly }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleDraftWeekly }}" style="{{ draftWeeklyStyle }}">{{ draftWeeklyLabel }}</button>
+                <div style="font-size:.72rem;color:#B0A091;margin:5px 2px 11px;letter-spacing:.04em;line-height:1.4;">本週任務＝這一週完成一次就好，沒完成前每天都會出現</div>
+              </sc-if>
+              <sc-if value="{{ draftShowSlot }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:.76rem;color:#B0A091;margin-bottom:6px;letter-spacing:.06em;">時段（小朋友可自己調整先後）</div>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;">
+                  <sc-for list="{{ slotBtns }}" as="b" hint-placeholder-count="4">
+                    <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
               <div style="display:flex;gap:8px;">
                 <sc-if value="{{ showCancelEdit }}" hint-placeholder-val="{{ false }}">
                   <button onClick="{{ cancelEdit }}" style="flex:1;background:#F3E7DA;border:1.5px solid #EAD3C6;color:#9B8979;border-radius:14px;padding:11px;font-size:.9rem;cursor:pointer;letter-spacing:.08em;">取消</button>
@@ -427,6 +480,7 @@ class Component extends DCLogic {
     this.LS_TPOMO = "summer_task_pomo_v1";
     this.LS_CHILDREN = "summer_children_v1";
     this.LS_CURCHILD = "summer_cur_child_v1";
+    this.LS_WTASKS = "summer_weekly_tasks_v1"; // weekly tasks (per child), keyed by week-start date
 
     // ---- children registry (each child has its own tasks / done / notes / rules) ----
     let children=null, curChild=null;
@@ -443,8 +497,8 @@ class Component extends DCLogic {
     try { pin = localStorage.getItem(this.LS_PIN) || ""; } catch(e){}
     try { pomos = JSON.parse(localStorage.getItem(this.LS_POMO) || "{}"); } catch(e){}
 
-    const cd = this.readChildData(curChild); // { done, dayNotes, tasksByDate, rules, taskPomos }
-    const { done, dayNotes, tasksByDate, rules, taskPomos } = cd;
+    const cd = this.readChildData(curChild); // { done, dayNotes, tasksByDate, rules, taskPomos, weeklyTasks }
+    const { done, dayNotes, tasksByDate, rules, taskPomos, weeklyTasks } = cd;
 
     const t = new Date();
     const inR = this.inRange(t.getFullYear(), t.getMonth(), t.getDate());
@@ -452,7 +506,7 @@ class Component extends DCLogic {
       viewYear: t.getFullYear(), viewMonth: t.getMonth(),
       selectedDate: inR ? this.dateKey(t.getFullYear(),t.getMonth(),t.getDate()) : null,
       children, currentChild: curChild,
-      done, dayNotes, tasksByDate, rules, pin, pomos, taskPomos,
+      done, dayNotes, tasksByDate, rules, pin, pomos, taskPomos, weeklyTasks,
       parentMode: false,
       pinPrompt: null, pinInput: "", pinError: "",
       editingId: null,
@@ -486,7 +540,7 @@ class Component extends DCLogic {
     if(!tasksByDate) tasksByDate=JSON.parse(JSON.stringify(this.DEFAULT_TASKS));
     let rules=null; try{ const r=localStorage.getItem(`${this.LS_RULES}_${id}`); rules=(r===null?null:r); }catch(e){}
     if(rules===null) rules=this.DEFAULT_RULES;
-    return { done:gj(this.LS_DONE,{}), dayNotes:gj(this.LS_NOTES,{}), tasksByDate, rules, taskPomos:gj(this.LS_TPOMO,{}) };
+    return { done:gj(this.LS_DONE,{}), dayNotes:gj(this.LS_NOTES,{}), tasksByDate, rules, taskPomos:gj(this.LS_TPOMO,{}), weeklyTasks:gj(this.LS_WTASKS,{}) };
   }
   migrateLegacy(id){
     [this.LS_DONE,this.LS_NOTES,this.LS_TASKS,this.LS_RULES,this.LS_TPOMO].forEach(base=>{
@@ -512,7 +566,7 @@ class Component extends DCLogic {
     this.setState(s=>{
       const children=s.children.filter(c=>c.id!==id);
       this.save(this.LS_CHILDREN,children);
-      [this.LS_DONE,this.LS_NOTES,this.LS_TASKS,this.LS_RULES,this.LS_TPOMO].forEach(base=>{ try{ localStorage.removeItem(`${base}_${id}`); }catch(e){} });
+      [this.LS_DONE,this.LS_NOTES,this.LS_TASKS,this.LS_RULES,this.LS_TPOMO,this.LS_WTASKS].forEach(base=>{ try{ localStorage.removeItem(`${base}_${id}`); }catch(e){} });
       if(s.currentChild===id){ const nid=children[0].id; this.save(this.LS_CURCHILD,nid);
         return { children, currentChild:nid, ...this.readChildData(nid), selectedDate:null, editingId:null, newTask:this.blankDraft() }; }
       return {children};
@@ -621,19 +675,37 @@ class Component extends DCLogic {
   onAudioFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return;
     if(f.size > 3*1024*1024){ alert("音檔太大了（"+(f.size/1048576).toFixed(1)+" MB）。瀏覽器儲存空間有限，請改用 3MB 以內的短音檔，或直接貼音檔網址。"); e.target.value=""; return; }
     const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
-  blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }; }
+  blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", weekly:false }; }
+  // Sunday (week-start) date-key for the week containing y/m0/d
+  weekStartKey(y,m0,d){ const dt=new Date(y,m0,d); dt.setDate(dt.getDate()-dt.getDay()); return this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate()); }
   addTaskNow(){
     const nt=this.state.newTask;
     const title=(nt.title||"").trim();
     if(!title){ return; }
     const key=this.state.selectedDate; if(!key) return;
     const editingId=this.state.editingId;
+    const fields={ type:nt.type, icon:(nt.icon||this.TYPE_ICON[nt.type]||"📌"), title, desc:(nt.desc||"").trim(), url:(nt.url||"").trim() };
+    // weekly task: one task for the whole week (only when creating, not editing)
+    if(nt.weekly && !editingId){
+      const [yy,mm,dd]=key.split("-").map(Number);
+      const wk=this.weekStartKey(yy,mm-1,dd);
+      this.setState(s=>{ const weeklyTasks={...s.weeklyTasks}; const arr=(weeklyTasks[wk]||[]).slice();
+        arr.push({ id:`w-${wk}-${Date.now()}`, ...fields, weekStart:wk });
+        weeklyTasks[wk]=arr; this.save(this.dk(this.LS_WTASKS),weeklyTasks);
+        return { weeklyTasks, editingId:null, newTask:this.blankDraft() }; });
+      return;
+    }
     this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let arr=(tasksByDate[key]||[]).slice();
-      const fields={ type:nt.type, icon:(nt.icon||this.TYPE_ICON[nt.type]||"📌"), title, desc:(nt.desc||"").trim(), url:(nt.url||"").trim(), slot:nt.slot||"any" };
-      if(editingId){ arr=arr.map(t=> t.id===editingId ? {...t, ...fields} : t); }
-      else { arr.push({ id:`${key}-${Date.now()}`, ...fields }); }
+      const dfields={...fields, slot:nt.slot||"any"};
+      if(editingId){ arr=arr.map(t=> t.id===editingId ? {...t, ...dfields} : t); }
+      else { arr.push({ id:`${key}-${Date.now()}`, ...dfields }); }
       tasksByDate[key]=arr; this.save(this.dk(this.LS_TASKS),tasksByDate);
       return { tasksByDate, editingId:null, newTask:this.blankDraft() }; });
+  }
+  deleteWeeklyTask(id, wk){
+    this.setState(s=>{ const weeklyTasks={...s.weeklyTasks}; if(weeklyTasks[wk]) weeklyTasks[wk]=weeklyTasks[wk].filter(t=>t.id!==id); this.save(this.dk(this.LS_WTASKS),weeklyTasks);
+      const done={...s.done}; delete done[id]; this.save(this.dk(this.LS_DONE),done);
+      return {weeklyTasks, done}; });
   }
   editTask(id){
     const key=this.state.selectedDate;
@@ -727,6 +799,13 @@ class Component extends DCLogic {
     if(m = url.match(/drive\.google\.com\/open\?id=([\w-]+)/))   return `https://drive.google.com/file/d/${m[1]}/preview`;
     return null;
   }
+  mediaFor(t){
+    const audioEl = t.type==='audio' && t.url ? React.createElement('audio',{controls:true,src:t.url,style:{width:'100%',height:'36px'}}) : null;
+    const imgEl = t.type==='image' && t.url ? React.createElement('img',{src:t.url,alt:'',style:{display:'block',maxWidth:'100%',borderRadius:'14px',margin:'2px 0 8px',border:'1.5px solid #EFE0D2'}}) : null;
+    const embed = t.type==='video' ? this.videoEmbedUrl(t.url) : null;
+    const videoEl = embed ? React.createElement('iframe',{src:embed,allow:'autoplay; encrypted-media; fullscreen',allowFullScreen:true,style:{width:'100%',aspectRatio:'16 / 9',border:'none',borderRadius:'14px',margin:'2px 0 8px',background:'#000'}}) : null;
+    return {audioEl,imgEl,embed,videoEl};
+  }
   buildModal(){
     const {selectedDate, done, dayNotes, tasksByDate, parentMode} = this.state;
     if(!selectedDate) return {show:false, tasks:[]};
@@ -775,8 +854,34 @@ class Component extends DCLogic {
       .filter(g=>g.tasks.length>0);
     slotGroups.forEach(g=>{ g.multi=g.tasks.length>1; g.tasks.forEach((tv,idx)=>{ tv.upStyle = idx>0?arrowBase:arrowOff; tv.downStyle = idx<g.tasks.length-1?arrowBase:arrowOff; }); });
 
+    // ---- weekly tasks (do once anytime this week; appear every day until done) ----
+    const wkKey=this.weekStartKey(y,m-1,d);
+    const wtasks=this.state.weeklyTasks[wkKey]||[];
+    const weeklyVals=wtasks.map(t=>{
+      const isDone=!!done[t.id];
+      const titleStyle={fontFamily:"'Noto Sans TC',sans-serif",fontWeight:'500',fontSize:'.95rem',marginBottom:'1px',color:isDone?'#A8978A':'#6E6155',letterSpacing:'.04em'};
+      if(isDone) titleStyle.textDecoration='line-through';
+      const chk={width:'24px',height:'24px',borderRadius:'8px',border:'2px solid #E3D2C2',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:'0',color:isDone?'#fff':'transparent'};
+      if(isDone){ chk.background='#9CC58C'; chk.borderColor='#9CC58C'; }
+      const bigChk={...chk,width:'30px',height:'30px',borderRadius:'10px',fontSize:'16px',alignSelf:'center',cursor:'pointer'};
+      const cl = t.type==='video'?'看完了！':t.type==='audio'?'聽完了！':t.type==='link'?'看完了！':t.type==='image'?'看過了！':'完成';
+      const {audioEl,imgEl,embed,videoEl}=this.mediaFor(t);
+      const base={background:'#FBF4EA',border:'1.5px solid #ECD9BE',borderRadius:'15px',padding:'8px 11px',marginBottom:'6px',display:'flex',gap:'9px',alignItems:'center'};
+      const baseDone={...base,background:'#F2F7EC',border:'1.5px solid #D6E4C9'};
+      return { id:t.id, icon:t.icon||"📌", title:t.title, desc:t.desc||"", hasDesc:!!(t.desc&&t.desc.trim()), audioEl, imgEl, videoEl,
+        url:t.url||"", isVideo:t.type==='video', hasVideoEmbed:!!embed, isVideoLink:(t.type==='video'&&!embed&&!!t.url), isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
+        showCheckRow:(t.type==='video'||t.type==='audio'||t.type==='link'||t.type==='image'),
+        cardStyle:isDone?baseDone:base, titleStyle, chkStyle:chk, bigChkStyle:bigChk, checkLabel:cl,
+        parentMode, onToggle:()=>this.toggleDone(t.id), onDelete:()=>this.deleteWeeklyTask(t.id, wkKey) };
+    });
+    const wsd=new Date(y,m-1,d); wsd.setDate(wsd.getDate()-wsd.getDay()); const wed=new Date(wsd); wed.setDate(wed.getDate()+6);
+    const weeklyDoneN=weeklyVals.filter(v=>done[v.id]).length;
+
     return {
       show:true,
+      weeklyVals, weeklyShow: weeklyVals.length>0,
+      weekRangeLabel: `${wsd.getMonth()+1}/${wsd.getDate()}–${wed.getMonth()+1}/${wed.getDate()}`,
+      weeklyProgText: `${weeklyDoneN}/${weeklyVals.length}`,
       dateLabel:`${m}月${d}日（週${dayNames[dt.getDay()]}）`,
       todayBadge: today?"今天":"",
       todayBadgeStyle: today?{fontSize:'.7rem',background:'#9CC58C',color:'#fff',padding:'2px 10px',borderRadius:'10px',fontWeight:'500',letterSpacing:'.06em'}:{display:'none'},
@@ -890,8 +995,14 @@ class Component extends DCLogic {
       draftHasImg: nt.type==='image' && !!nt.url,
       draftImgEl: (nt.type==='image' && nt.url) ? React.createElement('img',{src:nt.url,alt:'',style:{display:'block',maxWidth:'120px',borderRadius:'12px',marginTop:'8px',border:'1.5px solid #EFE0D2'}}) : null,
       typeBtns, slotBtns,
+      draftCanWeekly: !editing,
+      draftShowSlot: !nt.weekly,
+      draftWeeklyStyle: nt.weekly
+        ? {width:'100%',background:'#E0B24E',border:'none',color:'#fff',borderRadius:'12px',padding:'9px',fontSize:'.86rem',cursor:'pointer',letterSpacing:'.05em',boxShadow:'0 3px 0 #C99A3C'}
+        : {width:'100%',background:'#fff',border:'1.5px solid #EAD3C6',color:'#9B8979',borderRadius:'12px',padding:'9px',fontSize:'.86rem',cursor:'pointer',letterSpacing:'.05em'},
+      draftWeeklyLabel: nt.weekly ? "📌 本週任務（已開啟）" : "📌 設為本週任務（這週完成就好）",
       editFormTitle: editing ? "✏️ 編輯任務" : "➕ 新增任務 / 教材",
-      addBtnLabel: editing ? "儲存修改" : "加入這一天",
+      addBtnLabel: editing ? "儲存修改" : (nt.weekly ? "加入這一週" : "加入這一天"),
       showCancelEdit: editing,
       // batch
       batchTypeBtns, batchSlotBtns, scopeBtns, batchPeriodBtns, batchShowScope, batchRangeHint, batchApplyLabel,
@@ -908,6 +1019,7 @@ class Component extends DCLogic {
       onDraftIcon:(e)=>this.setDraft("icon",e.target.value), onDraftTitle:(e)=>this.setDraft("title",e.target.value),
       onDraftDesc:(e)=>this.setDraft("desc",e.target.value), onDraftUrl:(e)=>this.setDraft("url",e.target.value),
       onImageFile:(e)=>this.onImageFile(e), onAudioFile:(e)=>this.onAudioFile(e), addTaskNow:()=>this.addTaskNow(), cancelEdit:()=>this.cancelEdit(),
+      toggleDraftWeekly:()=>this.setDraft("weekly", !this.state.newTask.weekly),
       // batch handlers
       onBatchIcon:(e)=>this.setBatch("icon",e.target.value), onBatchTitle:(e)=>this.setBatch("title",e.target.value),
       onBatchDesc:(e)=>this.setBatch("desc",e.target.value), onBatchUrl:(e)=>this.setBatch("url",e.target.value),
