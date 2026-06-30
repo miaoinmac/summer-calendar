@@ -45,6 +45,14 @@
       </div>
     </div>
 
+    <!-- Child switcher -->
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 22px 2px;">
+      <span style="font-size:.74rem;color:#B0A091;letter-spacing:.08em;flex-shrink:0;">看誰的</span>
+      <sc-for list="{{ childChips }}" as="c" hint-placeholder-count="2">
+        <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.emoji }} {{ c.name }}</button>
+      </sc-for>
+    </div>
+
     <!-- Progress -->
     <div style="padding:13px 22px 4px;">
       <div style="height:11px;background:#F3E7DA;border-radius:99px;overflow:hidden;border:1.5px solid #EFE0D2;">
@@ -160,6 +168,22 @@
         <sc-if value="{{ batchHasMsg }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;color:#759067;font-size:.84rem;margin-top:9px;letter-spacing:.05em;">{{ batchMsg }}</div>
         </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- Manage children (parent) -->
+    <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:0 14px 16px;background:#F2EFE8;border:1.5px dashed #D8CBB8;border-radius:22px;padding:16px 18px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#8A7A66;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">👨‍👩‍👧‍👦 管理小孩</div>
+        <div style="font-size:.74rem;color:#A99C88;margin-bottom:11px;letter-spacing:.05em;">每個小孩各有自己的任務與家規</div>
+        <sc-for list="{{ childRows }}" as="c" hint-placeholder-count="2">
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <input value="{{ c.emoji }}" onChange="{{ c.onEmoji }}" maxlength="4" style="width:48px;text-align:center;border:1.5px solid #EAD3C6;border-radius:12px;padding:8px 4px;font-size:1.1rem;outline:none;background:#fff;box-sizing:border-box;">
+            <input value="{{ c.name }}" onChange="{{ c.onName }}" placeholder="名字" style="flex:1;min-width:0;border:1.5px solid #EAD3C6;border-radius:12px;padding:8px 11px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
+            <button onClick="{{ c.onDelete }}" style="{{ c.delStyle }}">🗑</button>
+          </div>
+        </sc-for>
+        <button onClick="{{ addChild }}" style="width:100%;background:#fff;border:1.5px solid #EAD3C6;color:#B07F66;border-radius:13px;padding:9px;font-size:.88rem;cursor:pointer;letter-spacing:.08em;margin-top:3px;">➕ 新增小孩</button>
       </div>
     </sc-if>
 
@@ -371,23 +395,33 @@ class Component extends DCLogic {
     this.LS_PIN   = "summer_pin_v1";
     this.LS_POMO  = "summer_pomo_v1";
     this.LS_TPOMO = "summer_task_pomo_v1";
+    this.LS_CHILDREN = "summer_children_v1";
+    this.LS_CURCHILD = "summer_cur_child_v1";
 
-    let done={}, dayNotes={}, tasksByDate=null, rules=null, pin="", pomos={}, taskPomos={};
-    try { done = JSON.parse(localStorage.getItem(this.LS_DONE) || "{}"); } catch(e){}
-    try { dayNotes = JSON.parse(localStorage.getItem(this.LS_NOTES) || "{}"); } catch(e){}
-    try { tasksByDate = JSON.parse(localStorage.getItem(this.LS_TASKS) || "null"); } catch(e){}
-    try { const r = localStorage.getItem(this.LS_RULES); rules = (r===null?null:r); } catch(e){}
+    // ---- children registry (each child has its own tasks / done / notes / rules) ----
+    let children=null, curChild=null;
+    try { children = JSON.parse(localStorage.getItem(this.LS_CHILDREN) || "null"); } catch(e){}
+    try { curChild = localStorage.getItem(this.LS_CURCHILD) || null; } catch(e){}
+    if(!children || !children.length){
+      children = [{id:"c1",name:"哥哥",emoji:"👦"},{id:"c2",name:"妹妹",emoji:"👧"}];
+      this.save(this.LS_CHILDREN, children);
+      this.migrateLegacy(children[0].id); // move any pre-existing single-set data into the first child
+    }
+    if(!curChild || !children.some(c=>c.id===curChild)) curChild = children[0].id;
+
+    let pin="", pomos={};
     try { pin = localStorage.getItem(this.LS_PIN) || ""; } catch(e){}
     try { pomos = JSON.parse(localStorage.getItem(this.LS_POMO) || "{}"); } catch(e){}
-    try { taskPomos = JSON.parse(localStorage.getItem(this.LS_TPOMO) || "{}"); } catch(e){}
-    if(!tasksByDate) tasksByDate = JSON.parse(JSON.stringify(this.DEFAULT_TASKS));
-    if(rules===null) rules = this.DEFAULT_RULES;
+
+    const cd = this.readChildData(curChild); // { done, dayNotes, tasksByDate, rules, taskPomos }
+    const { done, dayNotes, tasksByDate, rules, taskPomos } = cd;
 
     const t = new Date();
     const inR = this.inRange(t.getFullYear(), t.getMonth(), t.getDate());
     this.state = {
       viewYear: t.getFullYear(), viewMonth: t.getMonth(),
       selectedDate: inR ? this.dateKey(t.getFullYear(),t.getMonth(),t.getDate()) : null,
+      children, currentChild: curChild,
       done, dayNotes, tasksByDate, rules, pin, pomos, taskPomos,
       parentMode: false,
       pinPrompt: null, pinInput: "", pinError: "",
@@ -412,6 +446,48 @@ class Component extends DCLogic {
   isToday(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
   allTasks(){ return Object.values(this.state.tasksByDate).flat(); }
   save(k,v){ try{ localStorage.setItem(k, typeof v==="string"?v:JSON.stringify(v)); }catch(e){} }
+
+  // ---- per-child storage ----
+  // every child stores its own copy under "<base>_<childId>"; PIN stays family-wide.
+  dk(base){ return base + "_" + this.state.currentChild; }
+  readChildData(id){
+    const gj=(base,def)=>{ try{ const v=localStorage.getItem(`${base}_${id}`); return v===null?def:JSON.parse(v); }catch(e){ return def; } };
+    let tasksByDate=gj(this.LS_TASKS,null);
+    if(!tasksByDate) tasksByDate=JSON.parse(JSON.stringify(this.DEFAULT_TASKS));
+    let rules=null; try{ const r=localStorage.getItem(`${this.LS_RULES}_${id}`); rules=(r===null?null:r); }catch(e){}
+    if(rules===null) rules=this.DEFAULT_RULES;
+    return { done:gj(this.LS_DONE,{}), dayNotes:gj(this.LS_NOTES,{}), tasksByDate, rules, taskPomos:gj(this.LS_TPOMO,{}) };
+  }
+  migrateLegacy(id){
+    [this.LS_DONE,this.LS_NOTES,this.LS_TASKS,this.LS_RULES,this.LS_TPOMO].forEach(base=>{
+      try{ const v=localStorage.getItem(base); if(v!==null && localStorage.getItem(`${base}_${id}`)===null) localStorage.setItem(`${base}_${id}`, v); }catch(e){}
+    });
+  }
+  selectChild(id){
+    if(id===this.state.currentChild) return;
+    this.save(this.LS_CURCHILD, id);
+    const cd=this.readChildData(id);
+    this.setState({ currentChild:id, ...cd, selectedDate:null, editingId:null, newTask:this.blankDraft(), batchMsg:"" });
+  }
+  addChild(){
+    this.setState(s=>{ const id="c"+Date.now();
+      const children=[...s.children, {id, name:"新小孩", emoji:"🧒"}];
+      this.save(this.LS_CHILDREN, children); return {children}; });
+  }
+  renameChild(id,val){ this.setState(s=>{ const children=s.children.map(c=>c.id===id?{...c,name:val}:c); this.save(this.LS_CHILDREN,children); return {children}; }); }
+  setChildEmoji(id,val){ const e=(val||"").trim(); this.setState(s=>{ const children=s.children.map(c=>c.id===id?{...c,emoji:(e||c.emoji)}:c); this.save(this.LS_CHILDREN,children); return {children}; }); }
+  deleteChild(id){
+    if(this.state.children.length<=1) return; // always keep at least one child
+    if(!confirm("確定要刪除這個小孩？他的所有任務、家規、紀錄都會清除。")) return;
+    this.setState(s=>{
+      const children=s.children.filter(c=>c.id!==id);
+      this.save(this.LS_CHILDREN,children);
+      [this.LS_DONE,this.LS_NOTES,this.LS_TASKS,this.LS_RULES,this.LS_TPOMO].forEach(base=>{ try{ localStorage.removeItem(`${base}_${id}`); }catch(e){} });
+      if(s.currentChild===id){ const nid=children[0].id; this.save(this.LS_CURCHILD,nid);
+        return { children, currentChild:nid, ...this.readChildData(nid), selectedDate:null, editingId:null, newTask:this.blankDraft() }; }
+      return {children};
+    });
+  }
 
   pillStyle(bg,color,done){
     const s={fontSize:'.62rem',fontWeight:'400',lineHeight:'1.35',borderRadius:'7px',padding:'2px 6px',
@@ -486,13 +562,13 @@ class Component extends DCLogic {
   nextMonth(){ this.setState(s=>{ let m=s.viewMonth+1,y=s.viewYear; if(m>11){m=0;y++;} return {viewMonth:m,viewYear:y}; }); }
 
   toggleDone(id){
-    this.setState(s=>{ const done={...s.done}; done[id]=!done[id]; this.save(this.LS_DONE,done);
+    this.setState(s=>{ const done={...s.done}; done[id]=!done[id]; this.save(this.dk(this.LS_DONE),done);
       if(done[id]) this.showPop("⭐"); return {done}; });
   }
   showPop(emoji){ const el=document.createElement("div"); el.className="popstar"; el.textContent=emoji; document.body.appendChild(el); setTimeout(()=>el.remove(),860); }
 
-  onNoteInput(e){ const val=e.target.value; this.setState(s=>{ const dayNotes={...s.dayNotes}; dayNotes[s.selectedDate]=val; this.save(this.LS_NOTES,dayNotes); return {dayNotes}; }); }
-  onRulesInput(e){ const val=e.target.value; this.save(this.LS_RULES,val); this.setState({rules:val}); }
+  onNoteInput(e){ const val=e.target.value; this.setState(s=>{ const dayNotes={...s.dayNotes}; dayNotes[s.selectedDate]=val; this.save(this.dk(this.LS_NOTES),dayNotes); return {dayNotes}; }); }
+  onRulesInput(e){ const val=e.target.value; this.save(this.dk(this.LS_RULES),val); this.setState({rules:val}); }
 
   // ---- parent lock ----
   lockToggle(){ if(this.state.parentMode){ this.setState({parentMode:false}); } else { this.setState({pinPrompt: this.state.pin ? "enter" : "create", pinInput:"", pinError:""}); } }
@@ -525,7 +601,7 @@ class Component extends DCLogic {
       const fields={ type:nt.type, icon:(nt.icon||this.TYPE_ICON[nt.type]||"📌"), title, desc:(nt.desc||"").trim(), url:(nt.url||"").trim(), slot:nt.slot||"any" };
       if(editingId){ arr=arr.map(t=> t.id===editingId ? {...t, ...fields} : t); }
       else { arr.push({ id:`${key}-${Date.now()}`, ...fields }); }
-      tasksByDate[key]=arr; this.save(this.LS_TASKS,tasksByDate);
+      tasksByDate[key]=arr; this.save(this.dk(this.LS_TASKS),tasksByDate);
       return { tasksByDate, editingId:null, newTask:this.blankDraft() }; });
   }
   editTask(id){
@@ -536,8 +612,8 @@ class Component extends DCLogic {
   cancelEdit(){ this.setState({ editingId:null, newTask:this.blankDraft() }); }
   deleteTask(id){
     const key=this.state.selectedDate;
-    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; if(tasksByDate[key]) tasksByDate[key]=tasksByDate[key].filter(t=>t.id!==id); this.save(this.LS_TASKS,tasksByDate);
-      const done={...s.done}; delete done[id]; this.save(this.LS_DONE,done);
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; if(tasksByDate[key]) tasksByDate[key]=tasksByDate[key].filter(t=>t.id!==id); this.save(this.dk(this.LS_TASKS),tasksByDate);
+      const done={...s.done}; delete done[id]; this.save(this.dk(this.LS_DONE),done);
       const editingId = s.editingId===id ? null : s.editingId;
       return {tasksByDate, done, editingId, newTask: s.editingId===id ? this.blankDraft() : s.newTask }; });
   }
@@ -548,13 +624,13 @@ class Component extends DCLogic {
       const slot=arr[i].slot||"any"; let j=i+dir;
       while(j>=0&&j<arr.length&&((arr[j].slot||"any")!==slot)) j+=dir;
       if(j<0||j>=arr.length) return {};
-      const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; tasksByDate[key]=arr; this.save(this.LS_TASKS,tasksByDate);
+      const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; tasksByDate[key]=arr; this.save(this.dk(this.LS_TASKS),tasksByDate);
       return {tasksByDate}; });
   }
 
   // ---- per-task tomato count ----
-  incPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; taskPomos[id]=(taskPomos[id]||0)+1; this.save(this.LS_TPOMO,taskPomos); this.showPop("🍅"); return {taskPomos}; }); }
-  decPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; const n=(taskPomos[id]||0)-1; if(n<=0) delete taskPomos[id]; else taskPomos[id]=n; this.save(this.LS_TPOMO,taskPomos); return {taskPomos}; }); }
+  incPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; taskPomos[id]=(taskPomos[id]||0)+1; this.save(this.dk(this.LS_TPOMO),taskPomos); this.showPop("🍅"); return {taskPomos}; }); }
+  decPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; const n=(taskPomos[id]||0)-1; if(n<=0) delete taskPomos[id]; else taskPomos[id]=n; this.save(this.dk(this.LS_TPOMO),taskPomos); return {taskPomos}; }); }
 
   // ---- drag reorder ----
   reorderByDrag(dragId, targetId){
@@ -568,7 +644,7 @@ class Component extends DCLogic {
       moved.slot=targetSlot;
       const nti=arr.findIndex(t=>t.id===targetId);
       arr.splice(nti,0,moved);
-      tbd[key]=arr; this.save(this.LS_TASKS,tbd);
+      tbd[key]=arr; this.save(this.dk(this.LS_TASKS),tbd);
       return {tasksByDate:tbd}; });
   }
 
@@ -589,7 +665,7 @@ class Component extends DCLogic {
         arr.push({ id:`${key}-b${Date.now()}-${count}`, ...fields });
         tasksByDate[key]=arr; count++;
       }
-      this.save(this.LS_TASKS,tasksByDate);
+      this.save(this.dk(this.LS_TASKS),tasksByDate);
       return { tasksByDate, batch:{...b,title:"",desc:"",url:""}, batchMsg:`✅ 已加到 ${count} 天` };
     });
     setTimeout(()=>this.setState({batchMsg:""}),2800);
@@ -698,7 +774,21 @@ class Component extends DCLogic {
     const allDone = all.length>0 && dc===all.length;
     const pinCreate = s.pinPrompt==="create";
 
+    // children
+    const chipBase={borderRadius:'16px',padding:'7px 14px',fontSize:'.88rem',cursor:'pointer',letterSpacing:'.04em',fontFamily:"'Noto Sans TC',sans-serif",fontWeight:'500',whiteSpace:'nowrap'};
+    const chipActive={...chipBase,background:'#E6A98C',border:'1.5px solid #E6A98C',color:'#fff',boxShadow:'0 3px 0 #D08F73'};
+    const chipIdle={...chipBase,background:'#fff',border:'1.5px solid #EAD3C6',color:'#B07F66'};
+    const childChips=s.children.map(c=>({ emoji:c.emoji||"🧒", name:c.name||"小孩", onClick:()=>this.selectChild(c.id), style: c.id===s.currentChild?chipActive:chipIdle }));
+    const canDelChild=s.children.length>1;
+    const delChild={background:'#FBEDE9',border:'1.5px solid #EFCEC4',color:'#C57E6B',borderRadius:'11px',padding:'8px 10px',fontSize:'.9rem',cursor:'pointer',flexShrink:'0'};
+    const delChildOff={...delChild,opacity:'.35',cursor:'default'};
+    const childRows=s.children.map(c=>({ emoji:c.emoji||"", name:c.name||"",
+      onEmoji:(e)=>this.setChildEmoji(c.id,e.target.value), onName:(e)=>this.renameChild(c.id,e.target.value),
+      onDelete: canDelChild?(()=>this.deleteChild(c.id)):(()=>{}), delStyle: canDelChild?delChild:delChildOff }));
+
     return {
+      parentMode: s.parentMode,
+      childChips, childRows, addChild:()=>this.addChild(),
       subtitle: s.parentMode ? "家長模式：可新增任務、排行程、寫家規" : "點一下日期，看看今天要做什麼 ✨",
       doneCount: dc, totalCount: all.length,
       progressWidth: all.length ? (dc/all.length*100)+"%" : "0%",
