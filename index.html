@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- React 內嵌於本機，無需網路即可運作 -->
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
+<script src="./support.js"></script>
+<title>🌻 暑假行事曆</title>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;}
+  @keyframes popStar{0%{transform:translate(-50%,-50%) scale(0) rotate(-15deg);opacity:1}65%{transform:translate(-50%,-50%) scale(1.5) rotate(8deg);opacity:1}100%{transform:translate(-50%,-50%) scale(1.7) rotate(0);opacity:0}}
+  .popstar{position:fixed;top:50%;left:50%;font-size:3.4rem;pointer-events:none;animation:popStar .85s ease forwards;z-index:9999;}
+  @keyframes ovIn{from{opacity:0}to{opacity:1}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+  .ccell{transition:filter .15s;}
+  .ccell:hover{filter:brightness(.97);}
+  ::placeholder{color:#CDB8AC;font-weight:300;}
+  textarea,input,button{font-family:inherit;letter-spacing:.03em;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#FBF3EC;background-image:radial-gradient(#F1E2D6 1px, transparent 1px);background-size:24px 24px;font-family:'Noto Sans TC','Quicksand',system-ui,sans-serif;font-weight:400;letter-spacing:.04em;color:#6E6155;padding:18px 14px 44px;">
+  <div style="max-width:980px;margin:0 auto;background:#FFFCF7;border:2px solid #EFE0D2;border-radius:30px;box-shadow:0 20px 44px -24px rgba(150,115,90,.4);overflow:hidden;position:relative;">
+
+    <!-- Header -->
+    <div style="padding:22px 22px 18px;background:linear-gradient(180deg,#F6E3DA,#FBEFE7);border-bottom:2px dashed #EAD3C6;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1.45rem;color:#B07F66;letter-spacing:.14em;display:flex;align-items:center;gap:9px;">🌻 暑假行事曆</div>
+        <div style="font-size:.78rem;color:#A8978A;margin-top:4px;letter-spacing:.08em;">{{ subtitle }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
+        <div style="text-align:center;background:#fff;border:1.5px solid #EAD3C6;border-radius:18px;padding:7px 13px;">
+          <div style="font-size:.62rem;color:#B79E8E;letter-spacing:.1em;">已完成</div>
+          <div style="font-family:'Quicksand',sans-serif;font-weight:600;font-size:1.1rem;color:#C98F6E;line-height:1.15;">{{ doneCount }}<span style="font-size:.8rem;color:#CBBAA9;"> / {{ totalCount }}</span></div>
+        </div>
+        <button onClick="{{ lockToggle }}" style="{{ lockBtnStyle }}">{{ lockLabel }}</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div style="padding:13px 22px 4px;">
+      <div style="height:11px;background:#F3E7DA;border-radius:99px;overflow:hidden;border:1.5px solid #EFE0D2;">
+        <div style="height:100%;border-radius:99px;background:linear-gradient(90deg,#EEC3B2,#D9C9A0,#BBD0BE);transition:width .5s ease;width:{{ progressWidth }};"></div>
+      </div>
+    </div>
+
+    <!-- Celebration banner -->
+    <sc-if value="{{ allDone }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:12px 22px 2px;background:linear-gradient(180deg,#FBF0D8,#FBEDE4);border:1.5px solid #EAD3C6;border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:10px;justify-content:center;text-align:center;">
+        <span style="font-size:1.5rem;">⭐</span>
+        <span style="font-family:'Noto Sans TC',sans-serif;font-weight:500;color:#C98F6E;letter-spacing:.08em;font-size:.98rem;">太棒了！所有任務都完成了，給自己一顆大星星！</span>
+        <span style="font-size:1.5rem;">⭐</span>
+      </div>
+    </sc-if>
+
+    <!-- main two columns -->
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;">
+     <div style="flex:1 1 540px;min-width:0;">
+
+    <!-- Month nav -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 22px 14px;">
+      <button onClick="{{ prevMonth }}" style="background:#fff;border:1.5px solid #EAD3C6;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:1.2rem;color:#C98F6E;line-height:1;">‹</button>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:1.2rem;font-weight:500;color:#7C6A5C;letter-spacing:.14em;">{{ monthTitle }}</div>
+      <button onClick="{{ nextMonth }}" style="background:#fff;border:1.5px solid #EAD3C6;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:1.2rem;color:#C98F6E;line-height:1;">›</button>
+    </div>
+
+    <!-- Calendar -->
+    <div style="padding:0 14px 14px;">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:7px;">
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#D69A92;padding:4px 0;letter-spacing:.1em;">日</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">一</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">二</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">三</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">四</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">五</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#94AEBE;padding:4px 0;letter-spacing:.1em;">六</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
+        <sc-for list="{{ cells }}" as="cell" hint-placeholder-count="35">
+          <div class="ccell" style="{{ cell.style }}" onClick="{{ cell.onSelect }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;min-height:22px;">
+              <div style="{{ cell.numStyle }}">{{ cell.dayNum }}</div>
+              <div style="{{ cell.badgeStyle }}">{{ cell.badgeText }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <sc-for list="{{ cell.pills }}" as="p" hint-placeholder-count="0">
+                <div style="{{ p.style }}">{{ p.text }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+     </div>
+     <div style="flex:1 1 250px;min-width:232px;padding:6px 8px 4px;">
+
+    <!-- House rules -->
+    <div style="margin:6px 14px 16px;background:#F6ECE2;border:1.5px solid #EAD3C6;border-radius:22px;padding:16px 18px;">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#B07F66;letter-spacing:.12em;margin-bottom:11px;display:flex;align-items:center;gap:7px;">🏠 我們的家規</div>
+      <sc-if value="{{ rulesEdit }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <textarea value="{{ rulesValue }}" onChange="{{ onRulesInput }}" rows="4" placeholder="例：8:00 前完成任務 → 看電視 / 玩 Switch 30 分鐘&#10;9:00 洗澡&#10;9:30 睡覺" style="width:100%;border:1.5px solid #EAD3C6;border-radius:14px;padding:11px 13px;font-size:.92rem;color:#6E6155;outline:none;background:#fff;resize:vertical;min-height:96px;box-sizing:border-box;line-height:1.7;letter-spacing:.05em;"></textarea>
+          <div style="font-size:.72rem;color:#B0A091;margin-top:6px;letter-spacing:.06em;">每一行一條規則，小朋友看得到但不能修改</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ rulesShow }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ ruleLines }}" as="r" hint-placeholder-count="3">
+            <div style="display:flex;align-items:flex-start;gap:9px;background:#fff;border:1.5px solid #EFE0D2;border-radius:13px;padding:9px 13px;font-size:.9rem;color:#6E6155;line-height:1.5;letter-spacing:.04em;">
+              <span style="font-size:1rem;flex-shrink:0;">{{ r.icon }}</span><span>{{ r.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ rulesEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;color:#B0A091;font-size:.88rem;padding:6px 0;letter-spacing:.05em;">還沒有家規，請家長按右上角 🔒 新增</div>
+      </sc-if>
+    </div>
+
+    <!-- Batch assign (parent) -->
+    <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:0 14px 16px;background:#EFF1E8;border:1.5px dashed #CBD7BC;border-radius:22px;padding:16px 18px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#759067;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">📅 批次給任務</div>
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:11px;letter-spacing:.05em;">一次安排整個暑假，例：每天都要寫國字</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          <sc-for list="{{ batchTypeBtns }}" as="b" hint-placeholder-count="5">
+            <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:9px;">
+          <input value="{{ batchIcon }}" onChange="{{ onBatchIcon }}" placeholder="✏️" style="width:50px;text-align:center;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 4px;font-size:1.05rem;outline:none;background:#fff;box-sizing:border-box;">
+          <input value="{{ batchTitle }}" onChange="{{ onBatchTitle }}" placeholder="任務名稱（例：國字練習）" style="flex:1;min-width:0;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
+        </div>
+        <input value="{{ batchDesc }}" onChange="{{ onBatchDesc }}" placeholder="說明（可留空）" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.86rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.04em;">
+        <sc-if value="{{ batchNeedsUrl }}" hint-placeholder-val="{{ false }}">
+          <input value="{{ batchUrl }}" onChange="{{ onBatchUrl }}" placeholder="{{ batchUrlPlaceholder }}" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.84rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.02em;">
+        </sc-if>
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">時段</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          <sc-for list="{{ batchSlotBtns }}" as="b" hint-placeholder-count="4">
+            <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+          </sc-for>
+        </div>
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">套用範圍（整個暑假）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+          <sc-for list="{{ scopeBtns }}" as="b" hint-placeholder-count="3">
+            <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+          </sc-for>
+        </div>
+        <button onClick="{{ applyBatch }}" style="width:100%;background:#8BAE76;color:#fff;border:none;border-radius:14px;padding:11px;font-size:.92rem;font-weight:500;cursor:pointer;letter-spacing:.1em;box-shadow:0 4px 0 #7A9D66;">套用到整個暑假</button>
+        <sc-if value="{{ batchHasMsg }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;color:#759067;font-size:.84rem;margin-top:9px;letter-spacing:.05em;">{{ batchMsg }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+     </div>
+    </div>
+
+  </div>
+
+  <!-- ===== Day modal ===== -->
+  <sc-if value="{{ modal.show }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(110,90,72,.34);backdrop-filter:blur(2px);display:flex;align-items:flex-start;justify-content:center;padding:26px 14px;z-index:500;animation:ovIn .2s ease;overflow:auto;">
+      <div onClick="{{ stop }}" style="width:100%;max-width:520px;background:#FFFCF7;border:2px solid #EFE0D2;border-radius:28px;box-shadow:0 26px 60px -20px rgba(120,90,60,.5);overflow:hidden;animation:cardIn .26s ease;">
+
+        <!-- modal header -->
+        <div style="padding:18px 22px;background:linear-gradient(180deg,#F6E3DA,#FBEFE7);border-bottom:2px dashed #EAD3C6;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:1.18rem;font-weight:500;color:#7C6A5C;letter-spacing:.1em;display:flex;align-items:center;gap:8px;">📅 {{ modal.dateLabel }}<span style="{{ modal.todayBadgeStyle }}">{{ modal.todayBadge }}</span></div>
+          <button onClick="{{ closeModal }}" style="background:#fff;border:1.5px solid #EAD3C6;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1.1rem;color:#B07F66;line-height:1;flex-shrink:0;">✕</button>
+        </div>
+
+        <div style="padding:18px 22px 24px;max-height:72vh;overflow:auto;">
+
+          <!-- day progress -->
+          <div style="{{ modal.dayProgWrapStyle }}">
+            <span style="font-size:.82rem;color:#A8978A;letter-spacing:.06em;">今日任務</span>
+            <span style="font-family:'Quicksand',sans-serif;font-weight:700;font-size:1.05rem;color:#C98F6E;">{{ modal.dayProgText }}</span>
+            <span style="font-size:.8rem;color:#A8978A;letter-spacing:.05em;">{{ modal.dayProgNote }}</span>
+          </div>
+
+          <!-- schedule -->
+          <div style="margin-bottom:18px;">
+            <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:6px;">🗒️ 今天的行程</div>
+            <sc-if value="{{ modal.parentMode }}" hint-placeholder-val="{{ false }}">
+              <textarea value="{{ modal.noteValue }}" onChange="{{ onNoteInput }}" rows="2" placeholder="例：去外婆家 🏠&#10;游泳課下午 2 點 🏊" style="width:100%;border:1.5px solid #EAD3C6;border-radius:14px;padding:10px 13px;font-size:.92rem;color:#6E6155;outline:none;background:#fff;resize:vertical;min-height:56px;box-sizing:border-box;line-height:1.6;letter-spacing:.05em;"></textarea>
+            </sc-if>
+            <sc-if value="{{ modal.noteReadShow }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <sc-for list="{{ modal.noteLines }}" as="ln" hint-placeholder-count="1">
+                  <div style="background:#F7E6DE;border:1.5px solid #EECFC4;border-radius:13px;padding:9px 13px;font-size:.92rem;color:#A06B5E;letter-spacing:.04em;">{{ ln }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ modal.noteEmptyRead }}" hint-placeholder-val="{{ false }}">
+              <div style="color:#B0A091;font-size:.86rem;letter-spacing:.05em;padding:2px;">今天還沒有安排行程</div>
+            </sc-if>
+          </div>
+
+          <!-- tasks -->
+          <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:9px;display:flex;align-items:center;gap:6px;">🎯 今天的任務</div>
+
+          <sc-if value="{{ modal.empty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:18px;color:#8FA47F;font-size:.92rem;background:#EEF4E8;border:1.5px solid #D6E4C9;border-radius:16px;letter-spacing:.05em;">😌 今天沒有任務，好好玩、好好休息～</div>
+          </sc-if>
+
+          <sc-for list="{{ modal.slotGroups }}" as="grp" hint-placeholder-count="0">
+            <div style="margin-bottom:4px;">
+              <div style="font-size:.78rem;font-weight:500;color:#A8978A;letter-spacing:.1em;margin:2px 2px 8px;">{{ grp.label }}</div>
+              <sc-for list="{{ grp.tasks }}" as="task" hint-placeholder-count="0">
+                <div style="{{ task.cardStyle }}" onDragOver="{{ allowDrop }}" onDrop="{{ task.onDrop }}">
+                  <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center;align-items:center;">
+                    <div draggable="true" onDragStart="{{ task.onDragStart }}" title="拖我移動位置" style="cursor:grab;color:#CDB8A4;font-size:1.05rem;line-height:.8;padding:2px 1px;user-select:none;">⠿</div>
+                    <sc-if value="{{ grp.multi }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ task.onUp }}" style="{{ task.upStyle }}">▲</button>
+                    </sc-if>
+                    <sc-if value="{{ grp.multi }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ task.onDown }}" style="{{ task.downStyle }}">▼</button>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:1.45rem;flex-shrink:0;line-height:1;margin-top:1px;">{{ task.icon }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="{{ task.titleStyle }}">{{ task.title }}</div>
+                    <sc-if value="{{ task.hasDesc }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:.82rem;color:#A8978A;margin-bottom:7px;line-height:1.5;letter-spacing:.04em;">{{ task.desc }}</div>
+                    </sc-if>
+                    <sc-if value="{{ task.isImage }}" hint-placeholder-val="{{ false }}">
+                      <div>{{ task.imgEl }}</div>
+                    </sc-if>
+                    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
+                      <sc-if value="{{ task.isVideo }}" hint-placeholder-val="{{ false }}">
+                        <a href="{{ task.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#E6A98C;color:#fff;border-radius:13px;font-size:.84rem;font-weight:500;text-decoration:none;letter-spacing:.05em;">▶ 開啟影片</a>
+                      </sc-if>
+                      <sc-if value="{{ task.isLink }}" hint-placeholder-val="{{ false }}">
+                        <a href="{{ task.url }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#90A9B8;color:#fff;border-radius:13px;font-size:.84rem;font-weight:500;text-decoration:none;letter-spacing:.05em;">🔗 開啟連結</a>
+                      </sc-if>
+                      <sc-if value="{{ task.isAudio }}" hint-placeholder-val="{{ false }}">
+                        <div style="width:100%;">{{ task.audioEl }}</div>
+                      </sc-if>
+                      <sc-if value="{{ task.showCheckRow }}" hint-placeholder-val="{{ false }}">
+                        <div onClick="{{ task.onToggle }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;">
+                          <div style="{{ task.chkStyle }}">✓</div>
+                          <span style="font-size:.82rem;color:#A8978A;letter-spacing:.05em;">{{ task.checkLabel }}</span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ task.parentMode }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ task.onEdit }}" style="background:#FBF0E2;border:1.5px solid #EAD3C6;color:#B0844F;border-radius:11px;padding:5px 11px;font-size:.78rem;cursor:pointer;letter-spacing:.05em;">✏️ 編輯</button>
+                      </sc-if>
+                      <sc-if value="{{ task.parentMode }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ task.onDelete }}" style="background:#FBEDE9;border:1.5px solid #EFCEC4;color:#C57E6B;border-radius:11px;padding:5px 11px;font-size:.78rem;cursor:pointer;letter-spacing:.05em;">🗑 刪除</button>
+                      </sc-if>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:9px;">
+                      <span style="font-size:.78rem;color:#A8978A;letter-spacing:.05em;">做了幾個</span>
+                      <button onClick="{{ task.onDecPomo }}" style="width:26px;height:26px;border-radius:8px;border:1.5px solid #EAD3C6;background:#fff;color:#B08E72;font-size:1rem;line-height:1;cursor:pointer;padding:0;">−</button>
+                      <span style="font-family:'Quicksand',sans-serif;font-weight:700;font-size:1rem;color:#C98F6E;min-width:16px;text-align:center;">{{ task.pomoN }}</span>
+                      <button onClick="{{ task.onIncPomo }}" style="width:26px;height:26px;border-radius:8px;border:1.5px solid #EAD3C6;background:#fff;color:#759067;font-size:1rem;line-height:1;cursor:pointer;padding:0;">＋</button>
+                      <span style="font-size:1rem;letter-spacing:.04em;">{{ task.pomoTomatoes }}</span>
+                    </div>
+                  </div>
+                  <sc-if value="{{ task.isTask }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ task.onToggle }}" style="{{ task.bigChkStyle }}">✓</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <!-- parent: add task -->
+          <sc-if value="{{ modal.parentMode }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;background:#F6ECE2;border:1.5px dashed #E3C7B8;border-radius:18px;padding:15px 16px;">
+              <div style="font-size:.86rem;font-weight:500;color:#B07F66;letter-spacing:.08em;margin-bottom:11px;">{{ editFormTitle }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px;">
+                <sc-for list="{{ typeBtns }}" as="b" hint-placeholder-count="5">
+                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:9px;">
+                <input value="{{ draftIcon }}" onChange="{{ onDraftIcon }}" placeholder="🎬" style="width:54px;text-align:center;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 6px;font-size:1.05rem;outline:none;background:#fff;box-sizing:border-box;">
+                <input value="{{ draftTitle }}" onChange="{{ onDraftTitle }}" placeholder="任務名稱（例：閱讀 20 分鐘）" style="flex:1;min-width:0;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
+              </div>
+              <input value="{{ draftDesc }}" onChange="{{ onDraftDesc }}" placeholder="說明（可留空）" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.88rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.04em;">
+              <sc-if value="{{ draftNeedsUrl }}" hint-placeholder-val="{{ false }}">
+                <input value="{{ draftUrl }}" onChange="{{ onDraftUrl }}" placeholder="{{ draftUrlPlaceholder }}" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.86rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.02em;">
+              </sc-if>
+              <sc-if value="{{ draftNeedsImage }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-bottom:9px;">
+                  <input value="{{ draftUrl }}" onChange="{{ onDraftUrl }}" placeholder="貼上圖片網址，或從下方上傳" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.86rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:7px;letter-spacing:.02em;">
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #EAD3C6;border-radius:12px;padding:7px 13px;font-size:.84rem;color:#B07F66;cursor:pointer;letter-spacing:.04em;">📷 上傳圖片<input type="file" accept="image/*" onChange="{{ onImageFile }}" style="display:none;"></label>
+                  <sc-if value="{{ draftHasImg }}" hint-placeholder-val="{{ false }}">
+                    <div>{{ draftImgEl }}</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <div style="font-size:.76rem;color:#B0A091;margin-bottom:6px;letter-spacing:.06em;">時段（小朋友可自己調整先後）</div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;">
+                <sc-for list="{{ slotBtns }}" as="b" hint-placeholder-count="4">
+                  <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <sc-if value="{{ showCancelEdit }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ cancelEdit }}" style="flex:1;background:#F3E7DA;border:1.5px solid #EAD3C6;color:#9B8979;border-radius:14px;padding:11px;font-size:.9rem;cursor:pointer;letter-spacing:.08em;">取消</button>
+                </sc-if>
+                <button onClick="{{ addTaskNow }}" style="flex:2;background:#D89B6E;color:#fff;border:none;border-radius:14px;padding:11px;font-size:.92rem;font-weight:500;cursor:pointer;letter-spacing:.1em;box-shadow:0 4px 0 #C5895E;">{{ addBtnLabel }}</button>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== PIN prompt ===== -->
+  <sc-if value="{{ pin.show }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelPin }}" style="position:fixed;inset:0;background:rgba(110,90,72,.34);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:700;animation:ovIn .2s ease;">
+      <div onClick="{{ stop }}" style="width:100%;max-width:320px;background:#FFFCF7;border:2px solid #EFE0D2;border-radius:24px;box-shadow:0 24px 50px -18px rgba(120,90,60,.5);padding:24px 22px;text-align:center;animation:cardIn .24s ease;">
+        <div style="font-size:1.9rem;margin-bottom:8px;">🔒</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:1.05rem;font-weight:500;color:#7C6A5C;letter-spacing:.08em;margin-bottom:4px;">{{ pin.title }}</div>
+        <div style="font-size:.78rem;color:#A8978A;margin-bottom:14px;letter-spacing:.05em;">{{ pin.sub }}</div>
+        <input value="{{ pin.value }}" onChange="{{ onPinInput }}" type="password" inputmode="numeric" placeholder="● ● ● ●" style="width:100%;text-align:center;letter-spacing:.4em;border:1.5px solid #EAD3C6;border-radius:14px;padding:11px;font-size:1.2rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;">
+        <sc-if value="{{ pin.hasError }}" hint-placeholder-val="{{ false }}">
+          <div style="color:#D08A78;font-size:.8rem;margin-top:8px;letter-spacing:.05em;">{{ pin.error }}</div>
+        </sc-if>
+        <div style="display:flex;gap:9px;margin-top:16px;">
+          <button onClick="{{ cancelPin }}" style="flex:1;background:#F3E7DA;border:1.5px solid #EAD3C6;color:#9B8979;border-radius:13px;padding:10px;font-size:.9rem;cursor:pointer;letter-spacing:.08em;">取消</button>
+          <button onClick="{{ submitPin }}" style="flex:1.4;background:#D89B6E;border:none;color:#fff;border-radius:13px;padding:10px;font-size:.9rem;cursor:pointer;letter-spacing:.08em;box-shadow:0 3px 0 #C5895E;">確定</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.DEFAULT_TASKS = {
+      "2026-06-30": [
+        { id: "0630-1", type: "video", icon: "🎬", title: "範例：觀看學習影片", desc: "看完後打勾", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+        { id: "0630-2", type: "task",  icon: "📖", title: "範例：閱讀 20 分鐘", desc: "任何書都可以" }
+      ],
+      "2026-07-01": [
+        { id: "0701-1", type: "audio", icon: "🎧", title: "範例：聽力練習", desc: "仔細聽，聽完打勾", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+        { id: "0701-2", type: "task",  icon: "✏️", title: "範例：練習寫字 10 行", desc: "" }
+      ],
+    };
+    this.DEFAULT_RULES = "8:00 前完成任務 → 可以看電視 / 玩 Switch 30 分鐘\n9:00 洗澡\n9:30 睡覺";
+    this.TYPE_ICON = { task:"✏️", video:"🎬", audio:"🎧", link:"🔗", image:"🖼️" };
+    this.SLOT_ORDER = ["am","pm","eve","any"];
+    this.SLOT_META = { am:{label:"🌅 早上"}, pm:{label:"☀️ 下午"}, eve:{label:"🌙 晚上"}, any:{label:"🕐 隨時"} };
+    this.POMO_LEN = 25*60;
+
+    this.START = new Date(2026,5,30);
+    this.END   = new Date(2026,7,31);
+    this.LS_DONE  = "summer_cal_done_v3";
+    this.LS_NOTES = "summer_day_notes_v3";
+    this.LS_TASKS = "summer_tasks_v1";
+    this.LS_RULES = "summer_rules_v1";
+    this.LS_PIN   = "summer_pin_v1";
+    this.LS_POMO  = "summer_pomo_v1";
+    this.LS_TPOMO = "summer_task_pomo_v1";
+
+    let done={}, dayNotes={}, tasksByDate=null, rules=null, pin="", pomos={}, taskPomos={};
+    try { done = JSON.parse(localStorage.getItem(this.LS_DONE) || "{}"); } catch(e){}
+    try { dayNotes = JSON.parse(localStorage.getItem(this.LS_NOTES) || "{}"); } catch(e){}
+    try { tasksByDate = JSON.parse(localStorage.getItem(this.LS_TASKS) || "null"); } catch(e){}
+    try { const r = localStorage.getItem(this.LS_RULES); rules = (r===null?null:r); } catch(e){}
+    try { pin = localStorage.getItem(this.LS_PIN) || ""; } catch(e){}
+    try { pomos = JSON.parse(localStorage.getItem(this.LS_POMO) || "{}"); } catch(e){}
+    try { taskPomos = JSON.parse(localStorage.getItem(this.LS_TPOMO) || "{}"); } catch(e){}
+    if(!tasksByDate) tasksByDate = JSON.parse(JSON.stringify(this.DEFAULT_TASKS));
+    if(rules===null) rules = this.DEFAULT_RULES;
+
+    const t = new Date();
+    const inR = this.inRange(t.getFullYear(), t.getMonth(), t.getDate());
+    this.state = {
+      viewYear: t.getFullYear(), viewMonth: t.getMonth(),
+      selectedDate: inR ? this.dateKey(t.getFullYear(),t.getMonth(),t.getDate()) : null,
+      done, dayNotes, tasksByDate, rules, pin, pomos, taskPomos,
+      parentMode: false,
+      pinPrompt: null, pinInput: "", pinError: "",
+      editingId: null,
+      timer: { running:false, left: this.POMO_LEN },
+      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", scope:"everyday" },
+      batchMsg: "",
+      newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }
+    };
+  }
+
+  componentDidUpdate(prevProps, prevState){
+    if(this.isAllDone(this.state) && !this.isAllDone(prevState)) this.celebrate();
+  }
+  componentWillUnmount(){ if(this.timerId) clearInterval(this.timerId); }
+  isAllDone(st){ const all=Object.values(st.tasksByDate).flat(); return all.length>0 && all.every(t=>st.done[t.id]); }
+  celebrate(){ ["⭐","🌟","🎉","✨","⭐","🌟","🎊"].forEach((e,i)=>setTimeout(()=>this.showPop(e), i*130)); }
+  fmtTime(sec){ const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,"0")}`; }
+
+  dateKey(y,m,d){ return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`; }
+  inRange(y,m,d){ const dt=new Date(y,m,d); return dt>=this.START && dt<=this.END; }
+  isToday(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
+  allTasks(){ return Object.values(this.state.tasksByDate).flat(); }
+  save(k,v){ try{ localStorage.setItem(k, typeof v==="string"?v:JSON.stringify(v)); }catch(e){} }
+
+  pillStyle(bg,color,done){
+    const s={fontSize:'.62rem',fontWeight:'400',lineHeight:'1.35',borderRadius:'7px',padding:'2px 6px',
+      whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',background:bg,color:color,letterSpacing:'.02em'};
+    if(done){ s.opacity='.45'; s.textDecoration='line-through'; }
+    return s;
+  }
+
+  buildCells(){
+    const {viewYear:vy, viewMonth:vm, selectedDate, done, dayNotes, tasksByDate} = this.state;
+    const firstDay = new Date(vy, vm, 1).getDay();
+    const daysInMonth = new Date(vy, vm+1, 0).getDate();
+    const cells = [];
+    const hidden = {display:'none'};
+    for(let i=0;i<firstDay;i++) cells.push({key:'e'+i, dayNum:'', pills:[], badgeText:'',
+      style:{minHeight:'82px',borderRadius:'16px',border:'2px solid transparent',background:'transparent'},
+      numStyle:{}, badgeStyle:hidden, onSelect:undefined});
+
+    for(let d=1;d<=daysInMonth;d++){
+      const key = this.dateKey(vy,vm,d);
+      const tasks = tasksByDate[key] || [];
+      const inR = this.inRange(vy,vm,d);
+      const today = this.isToday(vy,vm,d);
+      const sel = selectedDate===key;
+      const doneN = tasks.filter(t=>done[t.id]).length;
+      const totalN = tasks.length;
+      const allDone = totalN>0 && doneN===totalN;
+      const note = (dayNotes[key]||"").trim();
+
+      const style = {minHeight:'82px',borderRadius:'16px',padding:'6px 6px 5px',position:'relative',
+        display:'flex',flexDirection:'column',overflow:'hidden',
+        border:'1.5px solid #EFE0D2',background:'#FFFDFA',cursor:inR?'pointer':'default'};
+      if(today){ style.border='2px solid #AECBA0'; style.background='#F2F7EC'; }
+      if(sel){ style.border='2px solid #E6A98C'; style.background='#FBEDE5'; }
+      if(!inR){ style.opacity='.38'; style.borderColor='#F2EADF'; }
+
+      const numStyle={fontFamily:"'Quicksand',sans-serif",fontSize:'.92rem',fontWeight:'600',lineHeight:'1',
+        width:'24px',height:'24px',display:'flex',alignItems:'center',justifyContent:'center',
+        borderRadius:'50%',color:'#8A7867'};
+      if(today){ numStyle.background='#9CC58C'; numStyle.color='#fff'; }
+      if(sel){ numStyle.background='#E6A98C'; numStyle.color='#fff'; }
+
+      let badgeText='', badgeStyle={display:'none'};
+      if(totalN>0){
+        const base={fontFamily:"'Quicksand',sans-serif",fontWeight:'700',fontSize:'.62rem',padding:'1px 7px',borderRadius:'99px',letterSpacing:'.02em'};
+        if(allDone){ badgeText='⭐'; badgeStyle={...base,background:'transparent',padding:'0',fontSize:'.78rem'}; }
+        else { badgeText=`${doneN}/${totalN}`; badgeStyle={...base,background:'#F3E7DA',color:'#B79A7E'}; }
+      }
+
+      const pills=[];
+      if(note){ note.split("\n").slice(0,2).forEach(line=>{ if(line.trim()) pills.push({text:line.trim(), style:this.pillStyle('#F4DED6','#B07F78')}); }); }
+      const maxTask = note?1:3;
+      tasks.slice(0,maxTask).forEach(t=>{
+        const isDone=!!done[t.id]; let bg,color,prefix;
+        if(t.type==='video'){ bg='#F3DBD2'; color='#B47C6A'; prefix='▶ '; }
+        else if(t.type==='audio'){ bg='#F4E9CC'; color='#A88E54'; prefix='♪ '; }
+        else if(t.type==='link'){ bg='#DEE7EC'; color='#74909E'; prefix='🔗 '; }
+        else if(t.type==='image'){ bg='#EFE0DC'; color='#A37D74'; prefix='🖼 '; }
+        else { bg='#DEEAD4'; color='#759067'; prefix='• '; }
+        pills.push({text:prefix+t.title, style:this.pillStyle(bg,color,isDone)});
+      });
+      if(tasks.length>maxTask) pills.push({text:`+${tasks.length-maxTask} 項`, style:this.pillStyle('#F0E7DA','#A8978A')});
+
+      cells.push({key, dayNum:d, badgeText, badgeStyle, style, numStyle, pills,
+        onSelect: inR ? ()=>this.setState({selectedDate:key}) : undefined});
+    }
+    return cells;
+  }
+
+  closeModal(){ this.setState({selectedDate:null}); }
+  prevMonth(){ this.setState(s=>{ let m=s.viewMonth-1,y=s.viewYear; if(m<0){m=11;y--;} return {viewMonth:m,viewYear:y}; }); }
+  nextMonth(){ this.setState(s=>{ let m=s.viewMonth+1,y=s.viewYear; if(m>11){m=0;y++;} return {viewMonth:m,viewYear:y}; }); }
+
+  toggleDone(id){
+    this.setState(s=>{ const done={...s.done}; done[id]=!done[id]; this.save(this.LS_DONE,done);
+      if(done[id]) this.showPop("⭐"); return {done}; });
+  }
+  showPop(emoji){ const el=document.createElement("div"); el.className="popstar"; el.textContent=emoji; document.body.appendChild(el); setTimeout(()=>el.remove(),860); }
+
+  onNoteInput(e){ const val=e.target.value; this.setState(s=>{ const dayNotes={...s.dayNotes}; dayNotes[s.selectedDate]=val; this.save(this.LS_NOTES,dayNotes); return {dayNotes}; }); }
+  onRulesInput(e){ const val=e.target.value; this.save(this.LS_RULES,val); this.setState({rules:val}); }
+
+  // ---- parent lock ----
+  lockToggle(){ if(this.state.parentMode){ this.setState({parentMode:false}); } else { this.setState({pinPrompt: this.state.pin ? "enter" : "create", pinInput:"", pinError:""}); } }
+  onPinInput(e){ this.setState({pinInput:e.target.value, pinError:""}); }
+  cancelPin(){ this.setState({pinPrompt:null, pinInput:"", pinError:""}); }
+  submitPin(){
+    const v=(this.state.pinInput||"").trim();
+    if(this.state.pinPrompt==="create"){
+      if(v.length<4){ this.setState({pinError:"請設定至少 4 位數字"}); return; }
+      this.save(this.LS_PIN, v);
+      this.setState({pin:v, parentMode:true, pinPrompt:null, pinInput:"", pinError:""});
+    } else {
+      if(v===this.state.pin){ this.setState({parentMode:true, pinPrompt:null, pinInput:"", pinError:""}); }
+      else this.setState({pinError:"密碼不對，再試一次"});
+    }
+  }
+
+  // ---- task editing (parent) ----
+  setType(type){ this.setState(s=>({ newTask:{...s.newTask, type, icon: this.TYPE_ICON[type]||s.newTask.icon } })); }
+  setDraft(field,val){ this.setState(s=>({ newTask:{...s.newTask, [field]:val} })); }
+  onImageFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
+  blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }; }
+  addTaskNow(){
+    const nt=this.state.newTask;
+    const title=(nt.title||"").trim();
+    if(!title){ return; }
+    const key=this.state.selectedDate; if(!key) return;
+    const editingId=this.state.editingId;
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let arr=(tasksByDate[key]||[]).slice();
+      const fields={ type:nt.type, icon:(nt.icon||this.TYPE_ICON[nt.type]||"📌"), title, desc:(nt.desc||"").trim(), url:(nt.url||"").trim(), slot:nt.slot||"any" };
+      if(editingId){ arr=arr.map(t=> t.id===editingId ? {...t, ...fields} : t); }
+      else { arr.push({ id:`${key}-${Date.now()}`, ...fields }); }
+      tasksByDate[key]=arr; this.save(this.LS_TASKS,tasksByDate);
+      return { tasksByDate, editingId:null, newTask:this.blankDraft() }; });
+  }
+  editTask(id){
+    const key=this.state.selectedDate;
+    const t=(this.state.tasksByDate[key]||[]).find(x=>x.id===id); if(!t) return;
+    this.setState({ editingId:id, newTask:{ type:t.type, icon:t.icon||this.TYPE_ICON[t.type]||"📌", title:t.title||"", desc:t.desc||"", url:t.url||"", slot:t.slot||"any" } });
+  }
+  cancelEdit(){ this.setState({ editingId:null, newTask:this.blankDraft() }); }
+  deleteTask(id){
+    const key=this.state.selectedDate;
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; if(tasksByDate[key]) tasksByDate[key]=tasksByDate[key].filter(t=>t.id!==id); this.save(this.LS_TASKS,tasksByDate);
+      const done={...s.done}; delete done[id]; this.save(this.LS_DONE,done);
+      const editingId = s.editingId===id ? null : s.editingId;
+      return {tasksByDate, done, editingId, newTask: s.editingId===id ? this.blankDraft() : s.newTask }; });
+  }
+  moveTask(id,dir){
+    const key=this.state.selectedDate;
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; const arr=(tasksByDate[key]||[]).slice();
+      const i=arr.findIndex(t=>t.id===id); if(i<0) return {};
+      const slot=arr[i].slot||"any"; let j=i+dir;
+      while(j>=0&&j<arr.length&&((arr[j].slot||"any")!==slot)) j+=dir;
+      if(j<0||j>=arr.length) return {};
+      const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; tasksByDate[key]=arr; this.save(this.LS_TASKS,tasksByDate);
+      return {tasksByDate}; });
+  }
+
+  // ---- per-task tomato count ----
+  incPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; taskPomos[id]=(taskPomos[id]||0)+1; this.save(this.LS_TPOMO,taskPomos); this.showPop("🍅"); return {taskPomos}; }); }
+  decPomo(id){ this.setState(s=>{ const taskPomos={...s.taskPomos}; const n=(taskPomos[id]||0)-1; if(n<=0) delete taskPomos[id]; else taskPomos[id]=n; this.save(this.LS_TPOMO,taskPomos); return {taskPomos}; }); }
+
+  // ---- drag reorder ----
+  reorderByDrag(dragId, targetId){
+    if(!dragId || dragId===targetId) return;
+    const key=this.state.selectedDate;
+    this.setState(s=>{ const tbd={...s.tasksByDate}; const arr=(tbd[key]||[]).slice();
+      const di=arr.findIndex(t=>t.id===dragId), ti=arr.findIndex(t=>t.id===targetId);
+      if(di<0||ti<0) return {};
+      const targetSlot=arr[ti].slot||"any";
+      const [moved]=arr.splice(di,1);
+      moved.slot=targetSlot;
+      const nti=arr.findIndex(t=>t.id===targetId);
+      arr.splice(nti,0,moved);
+      tbd[key]=arr; this.save(this.LS_TASKS,tbd);
+      return {tasksByDate:tbd}; });
+  }
+
+  // ---- batch (parent) ----
+  setBatch(field,val){ this.setState(s=>({batch:{...s.batch,[field]:val}})); }
+  setBatchType(type){ this.setState(s=>({batch:{...s.batch,type,icon:this.TYPE_ICON[type]||s.batch.icon}})); }
+  onBatchImageFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>this.setBatch("url", r.result); r.readAsDataURL(f); }
+  applyBatch(){
+    const b=this.state.batch; const title=(b.title||"").trim(); if(!title) return;
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let count=0;
+      const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any" };
+      for(let dt=new Date(this.START); dt<=this.END; dt.setDate(dt.getDate()+1)){
+        const dow=dt.getDay();
+        const ok = b.scope==="everyday" || (b.scope==="weekday"&&dow>=1&&dow<=5) || (b.scope==="weekend"&&(dow===0||dow===6));
+        if(!ok) continue;
+        const key=this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate());
+        const arr=(tasksByDate[key]||[]).slice();
+        arr.push({ id:`${key}-b${Date.now()}-${count}`, ...fields });
+        tasksByDate[key]=arr; count++;
+      }
+      this.save(this.LS_TASKS,tasksByDate);
+      return { tasksByDate, batch:{...b,title:"",desc:"",url:""}, batchMsg:`✅ 已加到 ${count} 天` };
+    });
+    setTimeout(()=>this.setState({batchMsg:""}),2800);
+  }
+
+  buildModal(){
+    const {selectedDate, done, dayNotes, tasksByDate, parentMode} = this.state;
+    if(!selectedDate) return {show:false, tasks:[]};
+    const [y,m,d]=selectedDate.split("-").map(Number);
+    const dt=new Date(y,m-1,d);
+    const dayNames=["日","一","二","三","四","五","六"];
+    const tasks=tasksByDate[selectedDate]||[];
+    const today=this.isToday(y,m-1,d);
+    const note=dayNotes[selectedDate]||"";
+    const noteLines=note.split("\n").map(s=>s.trim()).filter(Boolean);
+    const doneN=tasks.filter(t=>done[t.id]).length, totalN=tasks.length;
+
+    const cardBase={background:'#fff',border:'1.5px solid #EFE0D2',borderRadius:'18px',padding:'13px 15px',marginBottom:'10px',display:'flex',gap:'11px'};
+    const cardDone={background:'#F2F7EC',border:'1.5px solid #D6E4C9',borderRadius:'18px',padding:'13px 15px',marginBottom:'10px',display:'flex',gap:'11px'};
+
+    const taskVals=tasks.map(t=>{
+      const isDone=!!done[t.id];
+      const titleStyle={fontFamily:"'Noto Sans TC',sans-serif",fontWeight:'500',fontSize:'.98rem',marginBottom:'2px',color:isDone?'#A8978A':'#6E6155',letterSpacing:'.04em'};
+      if(isDone) titleStyle.textDecoration='line-through';
+      const chk={width:'24px',height:'24px',borderRadius:'8px',border:'2px solid #E3D2C2',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:'0',color:isDone?'#fff':'transparent'};
+      if(isDone){ chk.background='#9CC58C'; chk.borderColor='#9CC58C'; }
+      const bigChk={...chk,width:'30px',height:'30px',borderRadius:'10px',fontSize:'16px',alignSelf:'center',cursor:'pointer'};
+      const cl = t.type==='video'?'看完了！':t.type==='audio'?'聽完了！':t.type==='link'?'看完了！':t.type==='image'?'看過了！':'完成';
+      const audioEl = t.type==='audio' && t.url ? React.createElement('audio',{controls:true,src:t.url,style:{width:'100%',height:'36px'}}) : null;
+      const imgEl = t.type==='image' && t.url ? React.createElement('img',{src:t.url,alt:'',style:{display:'block',maxWidth:'100%',borderRadius:'14px',margin:'2px 0 8px',border:'1.5px solid #EFE0D2'}}) : null;
+      const editing = this.state.editingId===t.id;
+      const pomoN = this.state.taskPomos[t.id]||0;
+      return { id:t.id, icon:t.icon||"📌", title:t.title, desc:t.desc||"", hasDesc:!!(t.desc&&t.desc.trim()), audioEl, imgEl,
+        url:t.url||"", slot:t.slot||"any", isVideo:t.type==='video', isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
+        showCheckRow:(t.type==='video'||t.type==='audio'||t.type==='link'||t.type==='image'),
+        cardStyle: editing ? {...(isDone?cardDone:cardBase), border:'2px solid #D89B6E'} : (isDone?cardDone:cardBase),
+        titleStyle, chkStyle:chk, bigChkStyle:bigChk, checkLabel:cl,
+        pomoN, pomoTomatoes: "🍅".repeat(Math.min(pomoN,8)) + (pomoN>8?` ×${pomoN}`:""), hasPomo: pomoN>0,
+        onIncPomo:()=>this.incPomo(t.id), onDecPomo:()=>this.decPomo(t.id),
+        onDragStart:(e)=>{ this.dragId=t.id; if(e&&e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',t.id);}catch(_){} } },
+        onDrop:(e)=>{ if(e&&e.preventDefault) e.preventDefault(); this.reorderByDrag(this.dragId, t.id); this.dragId=null; },
+        parentMode, onToggle:()=>this.toggleDone(t.id), onDelete:()=>this.deleteTask(t.id), onEdit:()=>this.editTask(t.id),
+        onUp:()=>this.moveTask(t.id,-1), onDown:()=>this.moveTask(t.id,1) };
+    });
+
+    const arrowBase={width:'24px',height:'22px',borderRadius:'7px',border:'1.5px solid #EAD3C6',background:'#fff',cursor:'pointer',fontSize:'.7rem',color:'#B08E72',lineHeight:'1',padding:'0',display:'flex',alignItems:'center',justifyContent:'center'};
+    const arrowOff={...arrowBase,opacity:'.3',cursor:'default'};
+    const slotGroups=this.SLOT_ORDER.map(sk=>({ slotKey:sk, label:this.SLOT_META[sk].label, tasks: taskVals.filter(tv=>tv.slot===sk) }))
+      .filter(g=>g.tasks.length>0);
+    slotGroups.forEach(g=>{ g.multi=g.tasks.length>1; g.tasks.forEach((tv,idx)=>{ tv.upStyle = idx>0?arrowBase:arrowOff; tv.downStyle = idx<g.tasks.length-1?arrowBase:arrowOff; }); });
+
+    return {
+      show:true,
+      dateLabel:`${m}月${d}日（週${dayNames[dt.getDay()]}）`,
+      todayBadge: today?"今天":"",
+      todayBadgeStyle: today?{fontSize:'.7rem',background:'#9CC58C',color:'#fff',padding:'2px 10px',borderRadius:'10px',fontWeight:'500',letterSpacing:'.06em'}:{display:'none'},
+      parentMode,
+      noteValue:note,
+      noteLines,
+      noteReadShow: !parentMode && noteLines.length>0,
+      noteEmptyRead: !parentMode && noteLines.length===0,
+      empty: totalN===0,
+      slotGroups,
+      dayProgWrapStyle: totalN>0 ? {display:'flex',alignItems:'center',gap:'8px',background:'#F6ECE2',border:'1.5px solid #EAD3C6',borderRadius:'14px',padding:'9px 14px',marginBottom:'16px',flexWrap:'wrap'} : {display:'none'},
+      dayProgText: `${doneN} / ${totalN}`,
+      dayProgNote: doneN===totalN && totalN>0 ? "全部完成，太棒了！🎉" : `還有 ${totalN-doneN} 項`
+    };
+  }
+
+  renderVals(){
+    const s=this.state;
+    const all=this.allTasks();
+    const dc=all.filter(t=>s.done[t.id]).length;
+    const months=["一月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
+
+    const ruleLines=(s.rules||"").split("\n").map(x=>x.trim()).filter(Boolean).map(line=>{
+      let icon="🌟";
+      if(/電視|switch|遊戲|玩|tv/i.test(line)) icon="📺";
+      else if(/洗澡|刷牙/.test(line)) icon="🛁";
+      else if(/睡|床/.test(line)) icon="😴";
+      else if(/完成|任務|寫|讀|練/.test(line)) icon="✅";
+      else if(/吃|飯|早餐|午餐|晚餐/.test(line)) icon="🍚";
+      return {icon, text:line};
+    });
+
+    const nt=s.newTask;
+    const segIdle={background:'#fff',border:'1.5px solid #EAD3C6',color:'#9B8979',borderRadius:'11px',padding:'6px 11px',fontSize:'.8rem',cursor:'pointer',letterSpacing:'.04em'};
+    const segActive={background:'#D89B6E',border:'1.5px solid #D89B6E',color:'#fff',borderRadius:'11px',padding:'6px 11px',fontSize:'.8rem',cursor:'pointer',letterSpacing:'.04em'};
+    const types=[['task','✏️ 任務'],['video','🎬 影片'],['audio','🎧 音檔'],['link','🔗 連結'],['image','🖼️ 圖片']];
+    const typeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setType(k), style: nt.type===k?segActive:segIdle }));
+    const needsUrl = nt.type==='video'||nt.type==='audio'||nt.type==='link';
+    const urlPh = nt.type==='video'?'YouTube / 影片網址':nt.type==='audio'?'音檔網址 (.mp3)':'網頁連結網址';
+
+    const slots=[['am','🌅 早上'],['pm','☀️ 下午'],['eve','🌙 晚上'],['any','🕐 隨時']];
+    const slotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setDraft("slot",k), style: nt.slot===k?segActive:segIdle }));
+
+    // batch
+    const b=s.batch;
+    const batchTypeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setBatchType(k), style: b.type===k?segActive:segIdle }));
+    const batchSlotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setBatch("slot",k), style: b.slot===k?segActive:segIdle }));
+    const scopes=[['everyday','每天'],['weekday','平日'],['weekend','週末']];
+    const scopeBtns=scopes.map(([k,label])=>({ label, onClick:()=>this.setBatch("scope",k), style: b.scope===k?segActive:segIdle }));
+    const batchNeedsUrl = b.type==='video'||b.type==='audio'||b.type==='link';
+
+    const editing=!!s.editingId;
+    const allDone = all.length>0 && dc===all.length;
+    const pinCreate = s.pinPrompt==="create";
+
+    return {
+      subtitle: s.parentMode ? "家長模式：可新增任務、排行程、寫家規" : "點一下日期，看看今天要做什麼 ✨",
+      doneCount: dc, totalCount: all.length,
+      progressWidth: all.length ? (dc/all.length*100)+"%" : "0%",
+      monthTitle: `${s.viewYear} 年 ${months[s.viewMonth]}`,
+      cells: this.buildCells(),
+      lockLabel: s.parentMode ? "🔓 完成" : "🔒 家長",
+      lockBtnStyle: s.parentMode
+        ? {background:'#D89B6E',border:'none',color:'#fff',borderRadius:'16px',padding:'9px 13px',fontSize:'.8rem',cursor:'pointer',letterSpacing:'.06em',boxShadow:'0 3px 0 #C5895E'}
+        : {background:'#fff',border:'1.5px solid #EAD3C6',color:'#B07F66',borderRadius:'16px',padding:'9px 13px',fontSize:'.8rem',cursor:'pointer',letterSpacing:'.06em'},
+      // rules
+      rulesEdit: s.parentMode,
+      rulesShow: !s.parentMode && ruleLines.length>0,
+      rulesEmpty: !s.parentMode && ruleLines.length===0,
+      rulesValue: s.rules||"",
+      ruleLines,
+      // modal
+      modal: this.buildModal(),
+      allDone,
+      // draft
+      draftIcon:nt.icon, draftTitle:nt.title, draftDesc:nt.desc, draftUrl:nt.url,
+      draftNeedsUrl: needsUrl, draftNeedsImage: nt.type==='image',
+      draftUrlPlaceholder: urlPh,
+      draftHasImg: nt.type==='image' && !!nt.url,
+      draftImgEl: (nt.type==='image' && nt.url) ? React.createElement('img',{src:nt.url,alt:'',style:{display:'block',maxWidth:'120px',borderRadius:'12px',marginTop:'8px',border:'1.5px solid #EFE0D2'}}) : null,
+      typeBtns, slotBtns,
+      editFormTitle: editing ? "✏️ 編輯任務" : "➕ 新增任務 / 教材",
+      addBtnLabel: editing ? "儲存修改" : "加入這一天",
+      showCancelEdit: editing,
+      // batch
+      batchTypeBtns, batchSlotBtns, scopeBtns,
+      batchIcon:b.icon, batchTitle:b.title, batchDesc:b.desc, batchUrl:b.url,
+      batchNeedsUrl, batchUrlPlaceholder: urlPh, batchMsg: s.batchMsg, batchHasMsg: !!s.batchMsg,
+      // pin
+      pin: { show: !!s.pinPrompt, title: pinCreate?"設定家長密碼":"請輸入家長密碼", sub: pinCreate?"之後修改任務、行程、家規都會用到":"只有家長能新增 / 修改內容", value:s.pinInput, hasError:!!s.pinError, error:s.pinError },
+      // handlers
+      prevMonth:()=>this.prevMonth(), nextMonth:()=>this.nextMonth(),
+      closeModal:()=>this.closeModal(), stop:(e)=>e.stopPropagation(),
+      onNoteInput:(e)=>this.onNoteInput(e), onRulesInput:(e)=>this.onRulesInput(e),
+      lockToggle:()=>this.lockToggle(),
+      onPinInput:(e)=>this.onPinInput(e), submitPin:()=>this.submitPin(), cancelPin:()=>this.cancelPin(),
+      onDraftIcon:(e)=>this.setDraft("icon",e.target.value), onDraftTitle:(e)=>this.setDraft("title",e.target.value),
+      onDraftDesc:(e)=>this.setDraft("desc",e.target.value), onDraftUrl:(e)=>this.setDraft("url",e.target.value),
+      onImageFile:(e)=>this.onImageFile(e), addTaskNow:()=>this.addTaskNow(), cancelEdit:()=>this.cancelEdit(),
+      // batch handlers
+      onBatchIcon:(e)=>this.setBatch("icon",e.target.value), onBatchTitle:(e)=>this.setBatch("title",e.target.value),
+      onBatchDesc:(e)=>this.setBatch("desc",e.target.value), onBatchUrl:(e)=>this.setBatch("url",e.target.value),
+      applyBatch:()=>this.applyBatch(),
+      allowDrop:(e)=>{ if(e&&e.preventDefault) e.preventDefault(); }
+    };
+  }
+}
+</script>
+</body>
+</html>
