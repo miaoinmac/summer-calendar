@@ -158,13 +158,22 @@
             <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
           </sc-for>
         </div>
-        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">套用範圍（整個暑假）</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-          <sc-for list="{{ scopeBtns }}" as="b" hint-placeholder-count="3">
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">套用範圍</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          <sc-for list="{{ batchPeriodBtns }}" as="b" hint-placeholder-count="3">
             <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
           </sc-for>
         </div>
-        <button onClick="{{ applyBatch }}" style="width:100%;background:#8BAE76;color:#fff;border:none;border-radius:14px;padding:11px;font-size:.92rem;font-weight:500;cursor:pointer;letter-spacing:.1em;box-shadow:0 4px 0 #7A9D66;">套用到整個暑假</button>
+        <sc-if value="{{ batchShowScope }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">哪些天</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            <sc-for list="{{ scopeBtns }}" as="b" hint-placeholder-count="3">
+              <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="font-size:.72rem;color:#9DAE8C;margin-bottom:11px;letter-spacing:.04em;line-height:1.5;">{{ batchRangeHint }}</div>
+        <button onClick="{{ applyBatch }}" style="width:100%;background:#8BAE76;color:#fff;border:none;border-radius:14px;padding:11px;font-size:.92rem;font-weight:500;cursor:pointer;letter-spacing:.1em;box-shadow:0 4px 0 #7A9D66;">{{ batchApplyLabel }}</button>
         <sc-if value="{{ batchHasMsg }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;color:#759067;font-size:.84rem;margin-top:9px;letter-spacing:.05em;">{{ batchMsg }}</div>
         </sc-if>
@@ -203,7 +212,7 @@
           <button onClick="{{ closeModal }}" style="background:#fff;border:1.5px solid #EAD3C6;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1.1rem;color:#B07F66;line-height:1;flex-shrink:0;">✕</button>
         </div>
 
-        <div style="padding:18px 22px 24px;max-height:72vh;overflow:auto;">
+        <div style="padding:15px 20px 20px;max-height:80vh;overflow:auto;">
 
           <!-- day progress -->
           <div style="{{ modal.dayProgWrapStyle }}">
@@ -212,9 +221,10 @@
             <span style="font-size:.8rem;color:#A8978A;letter-spacing:.05em;">{{ modal.dayProgNote }}</span>
           </div>
 
-          <!-- schedule -->
-          <div style="margin-bottom:18px;">
-            <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:6px;">🗒️ 今天的行程</div>
+          <!-- schedule (hidden for kids when empty, to save space) -->
+          <sc-if value="{{ modal.scheduleShow }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-bottom:12px;">
+            <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:6px;display:flex;align-items:center;gap:6px;">🗒️ 今天的行程</div>
             <sc-if value="{{ modal.parentMode }}" hint-placeholder-val="{{ false }}">
               <textarea value="{{ modal.noteValue }}" onChange="{{ onNoteInput }}" rows="2" placeholder="例：去外婆家 🏠&#10;游泳課下午 2 點 🏊" style="width:100%;border:1.5px solid #EAD3C6;border-radius:14px;padding:10px 13px;font-size:.92rem;color:#6E6155;outline:none;background:#fff;resize:vertical;min-height:56px;box-sizing:border-box;line-height:1.6;letter-spacing:.05em;"></textarea>
             </sc-if>
@@ -225,21 +235,19 @@
                 </sc-for>
               </div>
             </sc-if>
-            <sc-if value="{{ modal.noteEmptyRead }}" hint-placeholder-val="{{ false }}">
-              <div style="color:#B0A091;font-size:.86rem;letter-spacing:.05em;padding:2px;">今天還沒有安排行程</div>
-            </sc-if>
           </div>
+          </sc-if>
 
           <!-- tasks -->
-          <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:9px;display:flex;align-items:center;gap:6px;">🎯 今天的任務</div>
+          <div style="font-size:.82rem;font-weight:500;color:#C98F6E;letter-spacing:.1em;margin-bottom:7px;display:flex;align-items:center;gap:6px;">🎯 今天的任務</div>
 
           <sc-if value="{{ modal.empty }}" hint-placeholder-val="{{ false }}">
             <div style="text-align:center;padding:18px;color:#8FA47F;font-size:.92rem;background:#EEF4E8;border:1.5px solid #D6E4C9;border-radius:16px;letter-spacing:.05em;">😌 今天沒有任務，好好玩、好好休息～</div>
           </sc-if>
 
           <sc-for list="{{ modal.slotGroups }}" as="grp" hint-placeholder-count="0">
-            <div style="margin-bottom:4px;">
-              <div style="font-size:.78rem;font-weight:500;color:#A8978A;letter-spacing:.1em;margin:2px 2px 8px;">{{ grp.label }}</div>
+            <div style="margin-bottom:2px;">
+              <div style="font-size:.76rem;font-weight:500;color:#A8978A;letter-spacing:.1em;margin:2px 2px 5px;">{{ grp.label }}</div>
               <sc-for list="{{ grp.tasks }}" as="task" hint-placeholder-count="0">
                 <div style="{{ task.cardStyle }}" onDragOver="{{ allowDrop }}" onDrop="{{ task.onDrop }}">
                   <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center;align-items:center;">
@@ -251,11 +259,11 @@
                       <button onClick="{{ task.onDown }}" style="{{ task.downStyle }}">▼</button>
                     </sc-if>
                   </div>
-                  <div style="font-size:1.45rem;flex-shrink:0;line-height:1;margin-top:1px;">{{ task.icon }}</div>
+                  <div style="font-size:1.2rem;flex-shrink:0;line-height:1;">{{ task.icon }}</div>
                   <div style="flex:1;min-width:0;">
                     <div style="{{ task.titleStyle }}">{{ task.title }}</div>
                     <sc-if value="{{ task.hasDesc }}" hint-placeholder-val="{{ false }}">
-                      <div style="font-size:.82rem;color:#A8978A;margin-bottom:7px;line-height:1.5;letter-spacing:.04em;">{{ task.desc }}</div>
+                      <div style="font-size:.78rem;color:#A8978A;margin-bottom:3px;line-height:1.4;letter-spacing:.04em;">{{ task.desc }}</div>
                     </sc-if>
                     <sc-if value="{{ task.isImage }}" hint-placeholder-val="{{ false }}">
                       <div>{{ task.imgEl }}</div>
@@ -283,12 +291,12 @@
                         <button onClick="{{ task.onDelete }}" style="background:#FBEDE9;border:1.5px solid #EFCEC4;color:#C57E6B;border-radius:11px;padding:5px 11px;font-size:.78rem;cursor:pointer;letter-spacing:.05em;">🗑 刪除</button>
                       </sc-if>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;margin-top:9px;">
-                      <span style="font-size:.78rem;color:#A8978A;letter-spacing:.05em;">做了幾個</span>
-                      <button onClick="{{ task.onDecPomo }}" style="width:26px;height:26px;border-radius:8px;border:1.5px solid #EAD3C6;background:#fff;color:#B08E72;font-size:1rem;line-height:1;cursor:pointer;padding:0;">−</button>
-                      <span style="font-family:'Quicksand',sans-serif;font-weight:700;font-size:1rem;color:#C98F6E;min-width:16px;text-align:center;">{{ task.pomoN }}</span>
-                      <button onClick="{{ task.onIncPomo }}" style="width:26px;height:26px;border-radius:8px;border:1.5px solid #EAD3C6;background:#fff;color:#759067;font-size:1rem;line-height:1;cursor:pointer;padding:0;">＋</button>
-                      <span style="font-size:1rem;letter-spacing:.04em;">{{ task.pomoTomatoes }}</span>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                      <span style="font-size:.72rem;color:#B0A091;letter-spacing:.04em;">做了幾個</span>
+                      <button onClick="{{ task.onDecPomo }}" style="width:22px;height:22px;border-radius:7px;border:1.5px solid #EAD3C6;background:#fff;color:#B08E72;font-size:.9rem;line-height:1;cursor:pointer;padding:0;">−</button>
+                      <span style="font-family:'Quicksand',sans-serif;font-weight:700;font-size:.92rem;color:#C98F6E;min-width:14px;text-align:center;">{{ task.pomoN }}</span>
+                      <button onClick="{{ task.onIncPomo }}" style="width:22px;height:22px;border-radius:7px;border:1.5px solid #EAD3C6;background:#fff;color:#759067;font-size:.9rem;line-height:1;cursor:pointer;padding:0;">＋</button>
+                      <span style="font-size:.92rem;letter-spacing:.04em;">{{ task.pomoTomatoes }}</span>
                     </div>
                   </div>
                   <sc-if value="{{ task.isTask }}" hint-placeholder-val="{{ false }}">
@@ -427,7 +435,7 @@ class Component extends DCLogic {
       pinPrompt: null, pinInput: "", pinError: "",
       editingId: null,
       timer: { running:false, left: this.POMO_LEN },
-      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", scope:"everyday" },
+      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", scope:"everyday", period:"summer" },
       batchMsg: "",
       newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }
     };
@@ -652,13 +660,27 @@ class Component extends DCLogic {
   setBatch(field,val){ this.setState(s=>({batch:{...s.batch,[field]:val}})); }
   setBatchType(type){ this.setState(s=>({batch:{...s.batch,type,icon:this.TYPE_ICON[type]||s.batch.icon}})); }
   onBatchImageFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>this.setBatch("url", r.result); r.readAsDataURL(f); }
+  // date span for a batch period: "summer" = whole vacation, "week" = this week (Sun–Sat
+  // containing today), "day" = today. Clamped to the summer range.
+  batchRange(period){
+    const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+    let from, to;
+    if(period==="day"){ from=new Date(today); to=new Date(today); }
+    else if(period==="week"){ from=new Date(today); from.setDate(from.getDate()-from.getDay()); to=new Date(from); to.setDate(to.getDate()+6); }
+    else { from=new Date(this.START); to=new Date(this.END); }
+    if(from<this.START) from=new Date(this.START);
+    if(to>this.END) to=new Date(this.END);
+    return {from,to};
+  }
   applyBatch(){
     const b=this.state.batch; const title=(b.title||"").trim(); if(!title) return;
+    const period=b.period||"summer";
+    const {from,to}=this.batchRange(period);
     this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let count=0;
       const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any" };
-      for(let dt=new Date(this.START); dt<=this.END; dt.setDate(dt.getDate()+1)){
+      for(let dt=new Date(from); dt<=to; dt.setDate(dt.getDate()+1)){
         const dow=dt.getDay();
-        const ok = b.scope==="everyday" || (b.scope==="weekday"&&dow>=1&&dow<=5) || (b.scope==="weekend"&&(dow===0||dow===6));
+        const ok = period==="day" ? true : (b.scope==="everyday" || (b.scope==="weekday"&&dow>=1&&dow<=5) || (b.scope==="weekend"&&(dow===0||dow===6)));
         if(!ok) continue;
         const key=this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate());
         const arr=(tasksByDate[key]||[]).slice();
@@ -683,12 +705,12 @@ class Component extends DCLogic {
     const noteLines=note.split("\n").map(s=>s.trim()).filter(Boolean);
     const doneN=tasks.filter(t=>done[t.id]).length, totalN=tasks.length;
 
-    const cardBase={background:'#fff',border:'1.5px solid #EFE0D2',borderRadius:'18px',padding:'13px 15px',marginBottom:'10px',display:'flex',gap:'11px'};
-    const cardDone={background:'#F2F7EC',border:'1.5px solid #D6E4C9',borderRadius:'18px',padding:'13px 15px',marginBottom:'10px',display:'flex',gap:'11px'};
+    const cardBase={background:'#fff',border:'1.5px solid #EFE0D2',borderRadius:'15px',padding:'8px 11px',marginBottom:'6px',display:'flex',gap:'9px',alignItems:'center'};
+    const cardDone={background:'#F2F7EC',border:'1.5px solid #D6E4C9',borderRadius:'15px',padding:'8px 11px',marginBottom:'6px',display:'flex',gap:'9px',alignItems:'center'};
 
     const taskVals=tasks.map(t=>{
       const isDone=!!done[t.id];
-      const titleStyle={fontFamily:"'Noto Sans TC',sans-serif",fontWeight:'500',fontSize:'.98rem',marginBottom:'2px',color:isDone?'#A8978A':'#6E6155',letterSpacing:'.04em'};
+      const titleStyle={fontFamily:"'Noto Sans TC',sans-serif",fontWeight:'500',fontSize:'.95rem',marginBottom:'1px',color:isDone?'#A8978A':'#6E6155',letterSpacing:'.04em'};
       if(isDone) titleStyle.textDecoration='line-through';
       const chk={width:'24px',height:'24px',borderRadius:'8px',border:'2px solid #E3D2C2',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:'0',color:isDone?'#fff':'transparent'};
       if(isDone){ chk.background='#9CC58C'; chk.borderColor='#9CC58C'; }
@@ -727,9 +749,10 @@ class Component extends DCLogic {
       noteLines,
       noteReadShow: !parentMode && noteLines.length>0,
       noteEmptyRead: !parentMode && noteLines.length===0,
+      scheduleShow: parentMode || noteLines.length>0,
       empty: totalN===0,
       slotGroups,
-      dayProgWrapStyle: totalN>0 ? {display:'flex',alignItems:'center',gap:'8px',background:'#F6ECE2',border:'1.5px solid #EAD3C6',borderRadius:'14px',padding:'9px 14px',marginBottom:'16px',flexWrap:'wrap'} : {display:'none'},
+      dayProgWrapStyle: totalN>0 ? {display:'flex',alignItems:'center',gap:'8px',background:'#F6ECE2',border:'1.5px solid #EAD3C6',borderRadius:'14px',padding:'7px 13px',marginBottom:'11px',flexWrap:'wrap'} : {display:'none'},
       dayProgText: `${doneN} / ${totalN}`,
       dayProgNote: doneN===totalN && totalN>0 ? "全部完成，太棒了！🎉" : `還有 ${totalN-doneN} 項`
     };
@@ -769,6 +792,18 @@ class Component extends DCLogic {
     const scopes=[['everyday','每天'],['weekday','平日'],['weekend','週末']];
     const scopeBtns=scopes.map(([k,label])=>({ label, onClick:()=>this.setBatch("scope",k), style: b.scope===k?segActive:segIdle }));
     const batchNeedsUrl = b.type==='video'||b.type==='audio'||b.type==='link';
+    // batch period (range): 整個暑假 / 這一週 / 只有今天
+    const bPeriod = b.period||'summer';
+    const periods=[['summer','整個暑假'],['week','這一週'],['day','只有今天']];
+    const batchPeriodBtns=periods.map(([k,label])=>({ label, onClick:()=>this.setBatch("period",k), style: bPeriod===k?segActive:segIdle }));
+    const batchShowScope = bPeriod!=='day';
+    const wkN=["日","一","二","三","四","五","六"];
+    const fmtMD=(d)=>`${d.getMonth()+1}/${d.getDate()}`;
+    const _t=new Date();
+    let batchRangeHint, batchApplyLabel;
+    if(bPeriod==='week'){ const {from,to}=this.batchRange('week'); batchRangeHint=`會套用到本週 ${fmtMD(from)}–${fmtMD(to)}（以今天 ${fmtMD(_t)} 計算）`; batchApplyLabel="套用到這一週"; }
+    else if(bPeriod==='day'){ batchRangeHint=`只會加到今天 ${fmtMD(_t)}（週${wkN[_t.getDay()]}）這一天`; batchApplyLabel="只加到今天"; }
+    else { batchRangeHint="會套用到整個暑假（6/30–8/31）"; batchApplyLabel="套用到整個暑假"; }
 
     const editing=!!s.editingId;
     const allDone = all.length>0 && dc===all.length;
@@ -818,7 +853,7 @@ class Component extends DCLogic {
       addBtnLabel: editing ? "儲存修改" : "加入這一天",
       showCancelEdit: editing,
       // batch
-      batchTypeBtns, batchSlotBtns, scopeBtns,
+      batchTypeBtns, batchSlotBtns, scopeBtns, batchPeriodBtns, batchShowScope, batchRangeHint, batchApplyLabel,
       batchIcon:b.icon, batchTitle:b.title, batchDesc:b.desc, batchUrl:b.url,
       batchNeedsUrl, batchUrlPlaceholder: urlPh, batchMsg: s.batchMsg, batchHasMsg: !!s.batchMsg,
       // pin
