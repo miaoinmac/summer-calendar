@@ -28,7 +28,7 @@
 </style>
 </helmet>
 <div style="min-height:100vh;background:#FBF3EC;background-image:radial-gradient(#F1E2D6 1px, transparent 1px);background-size:24px 24px;font-family:'Noto Sans TC','Quicksand',system-ui,sans-serif;font-weight:400;letter-spacing:.04em;color:#6E6155;padding:18px 14px 44px;">
-  <div style="max-width:980px;margin:0 auto;background:#FFFCF7;border:2px solid #EFE0D2;border-radius:30px;box-shadow:0 20px 44px -24px rgba(150,115,90,.4);overflow:hidden;position:relative;">
+  <div style="max-width:1100px;margin:0 auto;background:#FFFCF7;border:2px solid #EFE0D2;border-radius:30px;box-shadow:0 20px 44px -24px rgba(150,115,90,.4);overflow:hidden;position:relative;">
 
     <!-- Header -->
     <div style="padding:22px 22px 18px;background:linear-gradient(180deg,#F6E3DA,#FBEFE7);border-bottom:2px dashed #EAD3C6;display:flex;justify-content:space-between;align-items:center;gap:12px;">
@@ -69,9 +69,9 @@
       </div>
     </sc-if>
 
-    <!-- main two columns -->
-    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;">
-     <div style="flex:1 1 540px;min-width:0;">
+    <!-- calendar (full width) + panels below -->
+    <div>
+     <div>
 
     <!-- Month nav -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 22px 14px;">
@@ -109,10 +109,10 @@
     </div>
 
      </div>
-     <div style="flex:1 1 250px;min-width:232px;padding:6px 8px 4px;">
+     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;padding:10px 16px 4px;align-items:start;">
 
     <!-- House rules -->
-    <div style="margin:6px 14px 16px;background:#F6ECE2;border:1.5px solid #EAD3C6;border-radius:22px;padding:16px 18px;">
+    <div style="margin:0;background:#F6ECE2;border:1.5px solid #EAD3C6;border-radius:22px;padding:16px 18px;">
       <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#B07F66;letter-spacing:.12em;margin-bottom:11px;display:flex;align-items:center;gap:7px;">🏠 我們的家規</div>
       <sc-if value="{{ rulesEdit }}" hint-placeholder-val="{{ false }}">
         <div>
@@ -136,7 +136,7 @@
 
     <!-- Batch assign (parent) -->
     <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
-      <div style="margin:0 14px 16px;background:#EFF1E8;border:1.5px dashed #CBD7BC;border-radius:22px;padding:16px 18px;">
+      <div style="margin:0;background:#EFF1E8;border:1.5px dashed #CBD7BC;border-radius:22px;padding:16px 18px;">
         <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#759067;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">📅 批次給任務</div>
         <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:11px;letter-spacing:.05em;">一次安排整個暑假，例：每天都要寫國字</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
@@ -147,6 +147,11 @@
         <div style="display:flex;gap:8px;margin-bottom:9px;">
           <input value="{{ batchIcon }}" onChange="{{ onBatchIcon }}" placeholder="✏️" style="width:50px;text-align:center;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 4px;font-size:1.05rem;outline:none;background:#fff;box-sizing:border-box;">
           <input value="{{ batchTitle }}" onChange="{{ onBatchTitle }}" placeholder="任務名稱（例：國字練習）" style="flex:1;min-width:0;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+          <sc-for list="{{ batchIconPalette }}" as="ic" hint-placeholder-count="40">
+            <button onClick="{{ ic.onClick }}" style="{{ ic.style }}">{{ ic.emoji }}</button>
+          </sc-for>
         </div>
         <input value="{{ batchDesc }}" onChange="{{ onBatchDesc }}" placeholder="說明（可留空）" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.86rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.04em;">
         <sc-if value="{{ batchNeedsUrl }}" hint-placeholder-val="{{ false }}">
@@ -182,7 +187,7 @@
 
     <!-- Manage children (parent) -->
     <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
-      <div style="margin:0 14px 16px;background:#F2EFE8;border:1.5px dashed #D8CBB8;border-radius:22px;padding:16px 18px;">
+      <div style="margin:0;background:#F2EFE8;border:1.5px dashed #D8CBB8;border-radius:22px;padding:16px 18px;">
         <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#8A7A66;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">👨‍👩‍👧‍👦 管理小孩</div>
         <div style="font-size:.74rem;color:#A99C88;margin-bottom:11px;letter-spacing:.05em;">每個小孩各有自己的任務與家規</div>
         <sc-for list="{{ childRows }}" as="c" hint-placeholder-count="2">
@@ -309,7 +314,7 @@
 
           <!-- parent: add task -->
           <sc-if value="{{ modal.parentMode }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:14px;background:#F6ECE2;border:1.5px dashed #E3C7B8;border-radius:18px;padding:15px 16px;">
+            <div id="dc-task-form" style="margin-top:14px;background:#F6ECE2;border:1.5px dashed #E3C7B8;border-radius:18px;padding:15px 16px;">
               <div style="font-size:.86rem;font-weight:500;color:#B07F66;letter-spacing:.08em;margin-bottom:11px;">{{ editFormTitle }}</div>
               <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px;">
                 <sc-for list="{{ typeBtns }}" as="b" hint-placeholder-count="5">
@@ -320,9 +325,21 @@
                 <input value="{{ draftIcon }}" onChange="{{ onDraftIcon }}" placeholder="🎬" style="width:54px;text-align:center;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 6px;font-size:1.05rem;outline:none;background:#fff;box-sizing:border-box;">
                 <input value="{{ draftTitle }}" onChange="{{ onDraftTitle }}" placeholder="任務名稱（例：閱讀 20 分鐘）" style="flex:1;min-width:0;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
               </div>
+              <div style="font-size:.74rem;color:#B0A091;margin-bottom:5px;letter-spacing:.06em;">選圖示</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+                <sc-for list="{{ iconPalette }}" as="ic" hint-placeholder-count="40">
+                  <button onClick="{{ ic.onClick }}" style="{{ ic.style }}">{{ ic.emoji }}</button>
+                </sc-for>
+              </div>
               <input value="{{ draftDesc }}" onChange="{{ onDraftDesc }}" placeholder="說明（可留空）" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.88rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.04em;">
               <sc-if value="{{ draftNeedsUrl }}" hint-placeholder-val="{{ false }}">
                 <input value="{{ draftUrl }}" onChange="{{ onDraftUrl }}" placeholder="{{ draftUrlPlaceholder }}" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.86rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.02em;">
+              </sc-if>
+              <sc-if value="{{ draftIsAudio }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-bottom:9px;">
+                  <label style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #EAD3C6;border-radius:12px;padding:7px 13px;font-size:.84rem;color:#B07F66;cursor:pointer;letter-spacing:.04em;">🎵 上傳音檔<input type="file" accept="audio/*" onChange="{{ onAudioFile }}" style="display:none;"></label>
+                  <div style="font-size:.72rem;color:#B0A091;margin-top:5px;letter-spacing:.04em;">可上傳音檔（建議 3MB 內的短音檔），或在上面貼網址</div>
+                </div>
               </sc-if>
               <sc-if value="{{ draftNeedsImage }}" hint-placeholder-val="{{ false }}">
                 <div style="margin-bottom:9px;">
@@ -390,6 +407,8 @@ class Component extends DCLogic {
     };
     this.DEFAULT_RULES = "8:00 前完成任務 → 可以看電視 / 玩 Switch 30 分鐘\n9:00 洗澡\n9:30 睡覺";
     this.TYPE_ICON = { task:"✏️", video:"🎬", audio:"🎧", link:"🔗", image:"🖼️" };
+    // tappable icon palette for tasks (common kid activities)
+    this.ICON_PALETTE = ["📖","📚","✏️","📝","🔢","🔤","🌍","🔬","🎨","✂️","🎹","🎵","🎸","🎤","🏃","⚽","🏀","🏊","🚴","🤸","🧘","🧹","🧺","🛏️","🗑️","🐶","🌱","🍚","🍎","🦷","🛁","😴","⏰","🎬","🎧","🔗","🖼️","⭐","🎯","❤️"];
     this.SLOT_ORDER = ["am","pm","eve","any"];
     this.SLOT_META = { am:{label:"🌅 早上"}, pm:{label:"☀️ 下午"}, eve:{label:"🌙 晚上"}, any:{label:"🕐 隨時"} };
     this.POMO_LEN = 25*60;
@@ -445,7 +464,7 @@ class Component extends DCLogic {
     if(this.isAllDone(this.state) && !this.isAllDone(prevState)) this.celebrate();
   }
   componentWillUnmount(){ if(this.timerId) clearInterval(this.timerId); }
-  isAllDone(st){ const all=Object.values(st.tasksByDate).flat(); return all.length>0 && all.every(t=>st.done[t.id]); }
+  isAllDone(st){ if(!st || !st.tasksByDate || !st.done) return false; const all=Object.values(st.tasksByDate).flat(); return all.length>0 && all.every(t=>st.done[t.id]); }
   celebrate(){ ["⭐","🌟","🎉","✨","⭐","🌟","🎊"].forEach((e,i)=>setTimeout(()=>this.showPop(e), i*130)); }
   fmtTime(sec){ const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,"0")}`; }
 
@@ -511,7 +530,7 @@ class Component extends DCLogic {
     const cells = [];
     const hidden = {display:'none'};
     for(let i=0;i<firstDay;i++) cells.push({key:'e'+i, dayNum:'', pills:[], badgeText:'',
-      style:{minHeight:'82px',borderRadius:'16px',border:'2px solid transparent',background:'transparent'},
+      style:{minHeight:'104px',borderRadius:'16px',border:'2px solid transparent',background:'transparent'},
       numStyle:{}, badgeStyle:hidden, onSelect:undefined});
 
     for(let d=1;d<=daysInMonth;d++){
@@ -525,39 +544,32 @@ class Component extends DCLogic {
       const allDone = totalN>0 && doneN===totalN;
       const note = (dayNotes[key]||"").trim();
 
-      const style = {minHeight:'82px',borderRadius:'16px',padding:'6px 6px 5px',position:'relative',
+      const style = {minHeight:'104px',borderRadius:'16px',padding:'7px 7px 6px',position:'relative',
         display:'flex',flexDirection:'column',overflow:'hidden',
         border:'1.5px solid #EFE0D2',background:'#FFFDFA',cursor:inR?'pointer':'default'};
       if(today){ style.border='2px solid #AECBA0'; style.background='#F2F7EC'; }
       if(sel){ style.border='2px solid #E6A98C'; style.background='#FBEDE5'; }
       if(!inR){ style.opacity='.38'; style.borderColor='#F2EADF'; }
 
-      const numStyle={fontFamily:"'Quicksand',sans-serif",fontSize:'.92rem',fontWeight:'600',lineHeight:'1',
-        width:'24px',height:'24px',display:'flex',alignItems:'center',justifyContent:'center',
+      const numStyle={fontFamily:"'Quicksand',sans-serif",fontSize:'1rem',fontWeight:'600',lineHeight:'1',
+        width:'27px',height:'27px',display:'flex',alignItems:'center',justifyContent:'center',
         borderRadius:'50%',color:'#8A7867'};
       if(today){ numStyle.background='#9CC58C'; numStyle.color='#fff'; }
       if(sel){ numStyle.background='#E6A98C'; numStyle.color='#fff'; }
 
+      // badge = task progress (how many done / total), or ⭐ when all done
       let badgeText='', badgeStyle={display:'none'};
       if(totalN>0){
-        const base={fontFamily:"'Quicksand',sans-serif",fontWeight:'700',fontSize:'.62rem',padding:'1px 7px',borderRadius:'99px',letterSpacing:'.02em'};
-        if(allDone){ badgeText='⭐'; badgeStyle={...base,background:'transparent',padding:'0',fontSize:'.78rem'}; }
+        const base={fontFamily:"'Quicksand',sans-serif",fontWeight:'700',fontSize:'.7rem',padding:'2px 8px',borderRadius:'99px',letterSpacing:'.02em'};
+        if(allDone){ badgeText='⭐'; badgeStyle={...base,background:'transparent',padding:'0',fontSize:'1.05rem'}; }
         else { badgeText=`${doneN}/${totalN}`; badgeStyle={...base,background:'#F3E7DA',color:'#B79A7E'}; }
       }
 
+      // pills on the calendar = activities (the day's 行程), NOT the task list
       const pills=[];
-      if(note){ note.split("\n").slice(0,2).forEach(line=>{ if(line.trim()) pills.push({text:line.trim(), style:this.pillStyle('#F4DED6','#B07F78')}); }); }
-      const maxTask = note?1:3;
-      tasks.slice(0,maxTask).forEach(t=>{
-        const isDone=!!done[t.id]; let bg,color,prefix;
-        if(t.type==='video'){ bg='#F3DBD2'; color='#B47C6A'; prefix='▶ '; }
-        else if(t.type==='audio'){ bg='#F4E9CC'; color='#A88E54'; prefix='♪ '; }
-        else if(t.type==='link'){ bg='#DEE7EC'; color='#74909E'; prefix='🔗 '; }
-        else if(t.type==='image'){ bg='#EFE0DC'; color='#A37D74'; prefix='🖼 '; }
-        else { bg='#DEEAD4'; color='#759067'; prefix='• '; }
-        pills.push({text:prefix+t.title, style:this.pillStyle(bg,color,isDone)});
-      });
-      if(tasks.length>maxTask) pills.push({text:`+${tasks.length-maxTask} 項`, style:this.pillStyle('#F0E7DA','#A8978A')});
+      const noteLines = note ? note.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+      noteLines.slice(0,3).forEach(line=>{ pills.push({text:line, style:this.pillStyle('#F4DED6','#B07F78')}); });
+      if(noteLines.length>3) pills.push({text:`+${noteLines.length-3}`, style:this.pillStyle('#F0E7DA','#A8978A')});
 
       cells.push({key, dayNum:d, badgeText, badgeStyle, style, numStyle, pills,
         onSelect: inR ? ()=>this.setState({selectedDate:key}) : undefined});
@@ -571,7 +583,12 @@ class Component extends DCLogic {
 
   toggleDone(id){
     this.setState(s=>{ const done={...s.done}; done[id]=!done[id]; this.save(this.dk(this.LS_DONE),done);
-      if(done[id]) this.showPop("⭐"); return {done}; });
+      if(done[id]) this.showPop("⭐");
+      // big celebration when this finishes ALL of the open day's tasks
+      const key=s.selectedDate;
+      if(key && done[id]){ const dayTasks=s.tasksByDate[key]||[];
+        if(dayTasks.length>0 && dayTasks.every(t=>done[t.id])) setTimeout(()=>this.celebrate(),160); }
+      return {done}; });
   }
   showPop(emoji){ const el=document.createElement("div"); el.className="popstar"; el.textContent=emoji; document.body.appendChild(el); setTimeout(()=>el.remove(),860); }
 
@@ -598,6 +615,9 @@ class Component extends DCLogic {
   setType(type){ this.setState(s=>({ newTask:{...s.newTask, type, icon: this.TYPE_ICON[type]||s.newTask.icon } })); }
   setDraft(field,val){ this.setState(s=>({ newTask:{...s.newTask, [field]:val} })); }
   onImageFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
+  onAudioFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return;
+    if(f.size > 3*1024*1024){ alert("音檔太大了（"+(f.size/1048576).toFixed(1)+" MB）。瀏覽器儲存空間有限，請改用 3MB 以內的短音檔，或直接貼音檔網址。"); e.target.value=""; return; }
+    const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
   blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }; }
   addTaskNow(){
     const nt=this.state.newTask;
@@ -616,6 +636,8 @@ class Component extends DCLogic {
     const key=this.state.selectedDate;
     const t=(this.state.tasksByDate[key]||[]).find(x=>x.id===id); if(!t) return;
     this.setState({ editingId:id, newTask:{ type:t.type, icon:t.icon||this.TYPE_ICON[t.type]||"📌", title:t.title||"", desc:t.desc||"", url:t.url||"", slot:t.slot||"any" } });
+    // the edit form lives at the bottom of the modal — scroll it into view so it's obvious
+    setTimeout(()=>{ const el=document.getElementById("dc-task-form"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }, 60);
   }
   cancelEdit(){ this.setState({ editingId:null, newTask:this.blankDraft() }); }
   deleteTask(id){
@@ -781,6 +803,11 @@ class Component extends DCLogic {
     const typeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setType(k), style: nt.type===k?segActive:segIdle }));
     const needsUrl = nt.type==='video'||nt.type==='audio'||nt.type==='link';
     const urlPh = nt.type==='video'?'YouTube / 影片網址':nt.type==='audio'?'音檔網址 (.mp3)':'網頁連結網址';
+    // tappable icon palette
+    const palIdle={width:'34px',height:'34px',border:'1.5px solid #EFE0D2',background:'#fff',borderRadius:'10px',fontSize:'1.15rem',cursor:'pointer',padding:'0',lineHeight:'1'};
+    const palActive={...palIdle,border:'2px solid #D89B6E',background:'#FBF0E2'};
+    const iconPalette=this.ICON_PALETTE.map(e=>({ emoji:e, onClick:()=>this.setDraft("icon",e), style: nt.icon===e?palActive:palIdle }));
+    const batchIconPalette=this.ICON_PALETTE.map(e=>({ emoji:e, onClick:()=>this.setBatch("icon",e), style: s.batch.icon===e?palActive:palIdle }));
 
     const slots=[['am','🌅 早上'],['pm','☀️ 下午'],['eve','🌙 晚上'],['any','🕐 隨時']];
     const slotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setDraft("slot",k), style: nt.slot===k?segActive:segIdle }));
@@ -844,8 +871,8 @@ class Component extends DCLogic {
       allDone,
       // draft
       draftIcon:nt.icon, draftTitle:nt.title, draftDesc:nt.desc, draftUrl:nt.url,
-      draftNeedsUrl: needsUrl, draftNeedsImage: nt.type==='image',
-      draftUrlPlaceholder: urlPh,
+      draftNeedsUrl: needsUrl, draftNeedsImage: nt.type==='image', draftIsAudio: nt.type==='audio',
+      draftUrlPlaceholder: urlPh, iconPalette, batchIconPalette,
       draftHasImg: nt.type==='image' && !!nt.url,
       draftImgEl: (nt.type==='image' && nt.url) ? React.createElement('img',{src:nt.url,alt:'',style:{display:'block',maxWidth:'120px',borderRadius:'12px',marginTop:'8px',border:'1.5px solid #EFE0D2'}}) : null,
       typeBtns, slotBtns,
@@ -866,7 +893,7 @@ class Component extends DCLogic {
       onPinInput:(e)=>this.onPinInput(e), submitPin:()=>this.submitPin(), cancelPin:()=>this.cancelPin(),
       onDraftIcon:(e)=>this.setDraft("icon",e.target.value), onDraftTitle:(e)=>this.setDraft("title",e.target.value),
       onDraftDesc:(e)=>this.setDraft("desc",e.target.value), onDraftUrl:(e)=>this.setDraft("url",e.target.value),
-      onImageFile:(e)=>this.onImageFile(e), addTaskNow:()=>this.addTaskNow(), cancelEdit:()=>this.cancelEdit(),
+      onImageFile:(e)=>this.onImageFile(e), onAudioFile:(e)=>this.onAudioFile(e), addTaskNow:()=>this.addTaskNow(), cancelEdit:()=>this.cancelEdit(),
       // batch handlers
       onBatchIcon:(e)=>this.setBatch("icon",e.target.value), onBatchTitle:(e)=>this.setBatch("title",e.target.value),
       onBatchDesc:(e)=>this.setBatch("desc",e.target.value), onBatchUrl:(e)=>this.setBatch("url",e.target.value),
