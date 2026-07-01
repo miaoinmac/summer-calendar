@@ -211,6 +211,22 @@
       </div>
     </sc-if>
 
+    <!-- Cloud sync (parent) -->
+    <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:0;background:#EAF0F2;border:1.5px dashed #BBD0D8;border-radius:22px;padding:16px 18px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#5E8598;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">☁️ 雲端同步（跨裝置）</div>
+        <div style="font-size:.74rem;color:#8FA6AE;margin-bottom:11px;letter-spacing:.05em;line-height:1.5;">貼上你的 Google Apps Script 網址，電腦排的任務就會同步到小孩的平板。目前狀態：<b style="color:#5E8598;">{{ syncStatus }}</b></div>
+        <input value="{{ syncUrlInput }}" onChange="{{ onSyncUrl }}" placeholder="同步網址（https://script.google.com/…/exec）" style="width:100%;border:1.5px solid #C9DAE0;border-radius:12px;padding:9px 12px;font-size:.82rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:8px;letter-spacing:.02em;">
+        <input value="{{ syncSecretInput }}" onChange="{{ onSyncSecret }}" placeholder="密碼（可留空，需與程式碼裡 SECRET 一致）" style="width:100%;border:1.5px solid #C9DAE0;border-radius:12px;padding:9px 12px;font-size:.82rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.02em;">
+        <button onClick="{{ saveSyncConfig }}" style="width:100%;background:#6E9DB0;color:#fff;border:none;border-radius:13px;padding:10px;font-size:.9rem;font-weight:500;cursor:pointer;letter-spacing:.08em;box-shadow:0 3px 0 #5E8A9C;margin-bottom:8px;">儲存並開始同步</button>
+        <div style="display:flex;gap:8px;">
+          <button onClick="{{ manualSync }}" style="flex:1;background:#fff;border:1.5px solid #C9DAE0;color:#5E8598;border-radius:12px;padding:9px;font-size:.82rem;cursor:pointer;letter-spacing:.05em;">↻ 立即同步</button>
+          <button onClick="{{ uploadAsMaster }}" style="flex:1;background:#fff;border:1.5px solid #C9DAE0;color:#5E8598;border-radius:12px;padding:9px;font-size:.82rem;cursor:pointer;letter-spacing:.05em;">⬆️ 以這台為準</button>
+        </div>
+        <div style="font-size:.7rem;color:#A7BAC0;margin-top:8px;letter-spacing:.04em;line-height:1.5;">第一次設定：在「媽媽的電腦」按一次「以這台為準」上傳資料；小孩平板只要貼同一組網址、按「儲存並開始同步」就好。</div>
+      </div>
+    </sc-if>
+
      </div>
     </div>
 
@@ -500,6 +516,12 @@ class Component extends DCLogic {
     this.LS_CHILDREN = "summer_children_v1";
     this.LS_CURCHILD = "summer_cur_child_v1";
     this.LS_WTASKS = "summer_weekly_tasks_v1"; // weekly tasks (per child), keyed by week-start date
+    // ---- cloud sync (Google Drive via Apps Script) ----
+    this.LS_SYNC_URL    = "summer_sync_url_v1";
+    this.LS_SYNC_SECRET = "summer_sync_secret_v1";
+    this.LS_SYNC_META   = "summer_sync_meta_v1"; // { lsKey: lastWriteTimestamp }
+    // keys that must NOT sync (device-local): the sync config itself + which child THIS device is viewing
+    this.NOSYNC = { [this.LS_CURCHILD]:1, [this.LS_SYNC_URL]:1, [this.LS_SYNC_SECRET]:1, [this.LS_SYNC_META]:1 };
 
     // ---- children registry (each child has its own tasks / done / notes / rules) ----
     let children=null, curChild=null;
@@ -515,6 +537,10 @@ class Component extends DCLogic {
     let pin="", pomos={};
     try { pin = localStorage.getItem(this.LS_PIN) || ""; } catch(e){}
     try { pomos = JSON.parse(localStorage.getItem(this.LS_POMO) || "{}"); } catch(e){}
+
+    this.SYNC_URL = ""; this.SYNC_SECRET = "";
+    try { this.SYNC_URL = localStorage.getItem(this.LS_SYNC_URL) || ""; } catch(e){}
+    try { this.SYNC_SECRET = localStorage.getItem(this.LS_SYNC_SECRET) || ""; } catch(e){}
 
     const cd = this.readChildData(curChild); // { done, dayNotes, tasksByDate, rules, taskPomos, weeklyTasks }
     const { done, dayNotes, tasksByDate, rules, taskPomos, weeklyTasks } = cd;
@@ -533,14 +559,21 @@ class Component extends DCLogic {
       timer: { running:false, left: this.POMO_LEN },
       batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", scope:"everyday", period:"summer" },
       batchMsg: "",
-      newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other" }
+      newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other" },
+      syncUrlInput: this.SYNC_URL, syncSecretInput: this.SYNC_SECRET,
+      syncStatus: this.SYNC_URL ? "待同步" : "未設定"
     };
+  }
+
+  componentDidMount(){
+    if(location.hostname==="localhost"||location.hostname==="127.0.0.1") window.__cal=this; // localhost-only debug handle
+    if(this.SYNC_URL) this.startSync();
   }
 
   componentDidUpdate(prevProps, prevState){
     if(this.isAllDone(this.state) && !this.isAllDone(prevState)) this.celebrate();
   }
-  componentWillUnmount(){ if(this.timerId) clearInterval(this.timerId); }
+  componentWillUnmount(){ if(this.timerId) clearInterval(this.timerId); if(this._pollId) clearInterval(this._pollId); }
   isAllDone(st){ if(!st || !st.tasksByDate || !st.done) return false; const all=Object.values(st.tasksByDate).flat(); return all.length>0 && all.every(t=>st.done[t.id]); }
   celebrate(){ ["⭐","🌟","🎉","✨","⭐","🌟","🎊"].forEach((e,i)=>setTimeout(()=>this.showPop(e), i*130)); }
   fmtTime(sec){ const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,"0")}`; }
@@ -549,7 +582,98 @@ class Component extends DCLogic {
   inRange(y,m,d){ const dt=new Date(y,m,d); return dt>=this.START && dt<=this.END; }
   isToday(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
   allTasks(){ return Object.values(this.state.tasksByDate).flat(); }
-  save(k,v){ try{ localStorage.setItem(k, typeof v==="string"?v:JSON.stringify(v)); }catch(e){} }
+  save(k,v){ try{ localStorage.setItem(k, typeof v==="string"?v:JSON.stringify(v)); }catch(e){} this.touchSync(k); }
+
+  // ================= 雲端同步（Google Drive via Apps Script）=================
+  isSyncKey(k){ return !!k && k.indexOf("summer_")===0 && !this.NOSYNC[k]; }
+  syncMeta(){ try{ return JSON.parse(localStorage.getItem(this.LS_SYNC_META)||"{}"); }catch(e){ return {}; } }
+  saveSyncMeta(m){ try{ localStorage.setItem(this.LS_SYNC_META, JSON.stringify(m)); }catch(e){} }
+  // called after every localStorage write: stamp this key's time + schedule an upload
+  touchSync(k){
+    if(!this.isSyncKey(k)) return;
+    const m=this.syncMeta(); m[k]=Date.now(); this.saveSyncMeta(m);
+    if(this.SYNC_URL) this.schedulePush();
+  }
+  // gather all syncable localStorage entries into { data:{key:value}, meta:{key:ts} }
+  snapshotForSync(){
+    const data={}, meta=this.syncMeta();
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i);
+      if(this.isSyncKey(k)){ data[k]=localStorage.getItem(k); if(!meta[k]) meta[k]=1; } }
+    this.saveSyncMeta(meta);
+    return {data, meta};
+  }
+  schedulePush(){ if(this._pushT) clearTimeout(this._pushT); this._pushT=setTimeout(()=>this.pushNow(), 1500); }
+  setSyncState(msg){ this.setState({syncStatus:msg}); }
+  nowLabel(){ const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+  // merge a server store { data, meta } into localStorage: per-key newest-timestamp wins. returns changed keys.
+  applyStore(store){
+    if(!store || !store.data) return [];
+    const rdata=store.data, rmeta=store.meta||{}; const m=this.syncMeta(); const changed=[];
+    Object.keys(rdata).forEach(k=>{
+      if(!this.isSyncKey(k)) return;
+      const rt=rmeta[k]||0, lt=m[k]||0;
+      if(rt>lt){ try{ localStorage.setItem(k, rdata[k]); m[k]=rt; changed.push(k); }catch(e){} }
+    });
+    this.saveSyncMeta(m);
+    return changed;
+  }
+  // re-read children + current child's data from localStorage into state (after a pull brought changes)
+  refreshFromLocal(){
+    let children=null; try{ children=JSON.parse(localStorage.getItem(this.LS_CHILDREN)||"null"); }catch(e){}
+    if(!children || !children.length) return;
+    let cur=this.state.currentChild; if(!children.some(c=>c.id===cur)) cur=children[0].id;
+    let pin=this.state.pin; try{ pin=localStorage.getItem(this.LS_PIN)||""; }catch(e){}
+    const cd=this.readChildData(cur);
+    this.setState({children, currentChild:cur, pin, ...cd});
+  }
+  pushNow(){
+    if(!this.SYNC_URL || this._pushing) return;
+    this._pushing=true; this.setSyncState("上傳中…");
+    const snap=this.snapshotForSync();
+    fetch(this.SYNC_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({secret:this.SYNC_SECRET, data:snap.data, meta:snap.meta})})
+      .then(r=>r.json()).then(res=>{ this._pushing=false;
+        if(res && res.error){ this.setSyncState("錯誤："+res.error); return; }
+        const changed=this.applyStore(res); this.setSyncState("已同步 "+this.nowLabel());
+        if(changed.length && !this.state.parentMode) this.refreshFromLocal();
+      }).catch(e=>{ this._pushing=false; this.setSyncState("連不上雲端"); });
+  }
+  pullNow(apply){
+    if(!this.SYNC_URL) return;
+    const u=this.SYNC_URL + (this.SYNC_URL.indexOf("?")>=0?"&":"?") + "secret=" + encodeURIComponent(this.SYNC_SECRET||"");
+    fetch(u, {method:"GET"}).then(r=>r.json()).then(res=>{
+      if(res && res.error){ this.setSyncState("錯誤："+res.error); return; }
+      const changed=this.applyStore(res); this.setSyncState("已同步 "+this.nowLabel());
+      if(apply && changed.length) this.refreshFromLocal();
+    }).catch(e=>{ this.setSyncState("連不上雲端"); });
+  }
+  startSync(){
+    if(!this.SYNC_URL || this._syncStarted) return; this._syncStarted=true;
+    this.pullNow(true);
+    if(this._pollId) clearInterval(this._pollId);
+    this._pollId=setInterval(()=>{ if(!this.state.parentMode) this.pullNow(true); }, 12000);
+  }
+  // stamp every local syncable key as "now" so THIS device's data becomes the master copy on upload
+  stampAllLocal(){ const m=this.syncMeta(); const now=Date.now();
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(this.isSyncKey(k)) m[k]=now; }
+    this.saveSyncMeta(m); }
+  // ---- sync settings (parent panel) ----
+  onSyncUrl(e){ this.setState({syncUrlInput:e.target.value}); }
+  onSyncSecret(e){ this.setState({syncSecretInput:e.target.value}); }
+  saveSyncConfig(){
+    const url=(this.state.syncUrlInput||"").trim(), sec=(this.state.syncSecretInput||"").trim();
+    this.SYNC_URL=url; this.SYNC_SECRET=sec;
+    try{ localStorage.setItem(this.LS_SYNC_URL,url); localStorage.setItem(this.LS_SYNC_SECRET,sec); }catch(e){}
+    this._syncStarted=false; if(this._pollId) clearInterval(this._pollId);
+    if(url){ this.setSyncState("設定完成，同步中…"); this.startSync(); }
+    else { this.setSyncState("未設定"); }
+  }
+  manualSync(){ if(!this.SYNC_URL){ this.setSyncState("請先貼上同步網址"); return; } this.pullNow(true); this.schedulePush(); }
+  uploadAsMaster(){
+    if(!this.SYNC_URL){ this.setSyncState("請先貼上同步網址"); return; }
+    if(!confirm("把「這台裝置」現在的資料上傳到雲端當主檔？\n（第一次在媽媽電腦設定時按這個；小孩平板請不要按。）")) return;
+    this.stampAllLocal(); this.setSyncState("上傳中…"); this.pushNow();
+  }
 
   // ---- backup / restore (all app data → a file, and back) ----
   exportData(){
@@ -1067,6 +1191,10 @@ class Component extends DCLogic {
       batchTypeBtns, batchSlotBtns, scopeBtns, batchPeriodBtns, batchShowScope, batchRangeHint, batchApplyLabel,
       batchIcon:b.icon, batchTitle:b.title, batchDesc:b.desc, batchUrl:b.url,
       batchNeedsUrl, batchUrlPlaceholder: urlPh, batchMsg: s.batchMsg, batchHasMsg: !!s.batchMsg,
+      // cloud sync
+      syncUrlInput: s.syncUrlInput, syncSecretInput: s.syncSecretInput, syncStatus: s.syncStatus,
+      onSyncUrl:(e)=>this.onSyncUrl(e), onSyncSecret:(e)=>this.onSyncSecret(e),
+      saveSyncConfig:()=>this.saveSyncConfig(), manualSync:()=>this.manualSync(), uploadAsMaster:()=>this.uploadAsMaster(),
       // pin
       pin: { show: !!s.pinPrompt, title: pinCreate?"設定家長密碼":"請輸入家長密碼", sub: pinCreate?"之後修改任務、行程、家規都會用到":"只有家長能新增 / 修改內容", value:s.pinInput, hasError:!!s.pinError, error:s.pinError },
       // handlers
