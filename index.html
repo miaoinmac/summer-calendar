@@ -163,18 +163,30 @@
             <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
           </sc-for>
         </div>
-        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">套用範圍</div>
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">多久做一次</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-          <sc-for list="{{ batchPeriodBtns }}" as="b" hint-placeholder-count="3">
+          <sc-for list="{{ batchFreqBtns }}" as="b" hint-placeholder-count="6">
             <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
           </sc-for>
         </div>
-        <sc-if value="{{ batchShowScope }}" hint-placeholder-val="{{ true }}">
-          <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">哪些天</div>
+        <sc-if value="{{ batchShowNDays }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:.86rem;color:#6E6155;letter-spacing:.05em;">每 <input value="{{ batchNDays }}" onChange="{{ onBatchNDays }}" type="number" min="1" style="width:56px;text-align:center;border:1.5px solid #EAD3C6;border-radius:10px;padding:7px 4px;font-size:.9rem;outline:none;background:#fff;box-sizing:border-box;"> 天做一次（例：2＝隔天）</div>
+        </sc-if>
+        <sc-if value="{{ batchShowWeekly }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">選星期幾（可複選）</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-            <sc-for list="{{ scopeBtns }}" as="b" hint-placeholder-count="3">
+            <sc-for list="{{ batchWeekdayChips }}" as="b" hint-placeholder-count="7">
               <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
             </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:.86rem;color:#6E6155;letter-spacing:.05em;">每 <input value="{{ batchNWeeks }}" onChange="{{ onBatchNWeeks }}" type="number" min="1" style="width:56px;text-align:center;border:1.5px solid #EAD3C6;border-radius:10px;padding:7px 4px;font-size:.9rem;outline:none;background:#fff;box-sizing:border-box;"> 週（1＝每週，2＝隔週）</div>
+        </sc-if>
+        <sc-if value="{{ batchShowDates }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">從哪天到哪天</div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;">
+            <input value="{{ batchStartKey }}" onChange="{{ onBatchStart }}" type="date" min="{{ batchStartMin }}" max="{{ batchEndMax }}" style="border:1.5px solid #EAD3C6;border-radius:10px;padding:7px 9px;font-size:.84rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;">
+            <span style="color:#9DAE8C;">到</span>
+            <input value="{{ batchEndKey }}" onChange="{{ onBatchEnd }}" type="date" min="{{ batchStartMin }}" max="{{ batchEndMax }}" style="border:1.5px solid #EAD3C6;border-radius:10px;padding:7px 9px;font-size:.84rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;">
           </div>
         </sc-if>
         <div style="font-size:.72rem;color:#9DAE8C;margin-bottom:11px;letter-spacing:.04em;line-height:1.5;">{{ batchRangeHint }}</div>
@@ -557,7 +569,7 @@ class Component extends DCLogic {
       editingId: null,
       collapsedCats: {},
       timer: { running:false, left: this.POMO_LEN },
-      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", scope:"everyday", period:"summer" },
+      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", freq:"everyday", nDays:2, weekdays:{}, nWeeks:1, startKey:"", endKey:"" },
       batchMsg: "",
       newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other" },
       syncUrlInput: this.SYNC_URL, syncSecretInput: this.SYNC_SECRET,
@@ -927,31 +939,52 @@ class Component extends DCLogic {
   onBatchImageFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>this.setBatch("url", r.result); r.readAsDataURL(f); }
   // date span for a batch period: "summer" = whole vacation, "week" = this week (Sun–Sat
   // containing today), "day" = today. Clamped to the summer range.
-  batchRange(period){
+  parseKey(k){ const [y,m,d]=(k||"").split("-").map(Number); return new Date(y,(m||1)-1,d||1); }
+  // Monday 00:00 of the week containing d (calendar is Monday-first)
+  mondayStart(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
+  // compute the list of Date objects a batch config maps to (flexible recurrence, clamped to summer range)
+  batchDates(){
+    const b=this.state.batch; const freq=b.freq||"everyday";
     const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
-    let from, to;
-    if(period==="day"){ from=new Date(today); to=new Date(today); }
-    else if(period==="week"){ from=new Date(today); from.setDate(from.getDate()-((from.getDay()+6)%7)); to=new Date(from); to.setDate(to.getDate()+6); }
-    else { from=new Date(this.START); to=new Date(this.END); }
+    let from = b.startKey ? this.parseKey(b.startKey) : new Date(today);
+    let to   = b.endKey   ? this.parseKey(b.endKey)   : new Date(this.END);
+    if(freq==="once"){ from=new Date(today); to=new Date(today); }
     if(from<this.START) from=new Date(this.START);
     if(to>this.END) to=new Date(this.END);
-    return {from,to};
-  }
-  applyBatch(){
-    const b=this.state.batch; const title=(b.title||"").trim(); if(!title) return;
-    const period=b.period||"summer";
-    const {from,to}=this.batchRange(period);
-    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let count=0;
-      const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any", cat:b.cat||"other" };
+    const out=[]; if(from>to) return out;
+    const wd=b.weekdays||{};
+    const nDays=Math.max(1, parseInt(b.nDays,10)||1);
+    const nWeeks=Math.max(1, parseInt(b.nWeeks,10)||1);
+    if(freq==="everyNDays"){
+      for(let dt=new Date(from); dt<=to; dt.setDate(dt.getDate()+nDays)) out.push(new Date(dt));
+    } else if(freq==="weekly"){
+      const anchor=this.mondayStart(from);
+      for(let dt=new Date(from); dt<=to; dt.setDate(dt.getDate()+1)){
+        if(!wd[dt.getDay()]) continue;
+        const wi=Math.round((this.mondayStart(dt)-anchor)/(7*86400000));
+        if(wi%nWeeks===0) out.push(new Date(dt));
+      }
+    } else {
       for(let dt=new Date(from); dt<=to; dt.setDate(dt.getDate()+1)){
         const dow=dt.getDay();
-        const ok = period==="day" ? true : (b.scope==="everyday" || (b.scope==="weekday"&&dow>=1&&dow<=5) || (b.scope==="weekend"&&(dow===0||dow===6)));
-        if(!ok) continue;
+        const ok = (freq==="everyday"||freq==="once") || (freq==="weekday"&&dow>=1&&dow<=5) || (freq==="weekend"&&(dow===0||dow===6));
+        if(ok) out.push(new Date(dt));
+      }
+    }
+    return out;
+  }
+  toggleBatchWeekday(d){ this.setState(s=>{ const w={...(s.batch.weekdays||{})}; w[d]=!w[d]; return {batch:{...s.batch,weekdays:w}}; }); }
+  applyBatch(){
+    const b=this.state.batch; const title=(b.title||"").trim(); if(!title) return;
+    const dates=this.batchDates();
+    this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let count=0;
+      const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any", cat:b.cat||"other" };
+      dates.forEach(dt=>{
         const key=this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate());
         const arr=(tasksByDate[key]||[]).slice();
         arr.push({ id:`${key}-b${Date.now()}-${count}`, ...fields });
         tasksByDate[key]=arr; count++;
-      }
+      });
       this.save(this.dk(this.LS_TASKS),tasksByDate);
       return { tasksByDate, batch:{...b,title:"",desc:"",url:""}, batchMsg:`✅ 已加到 ${count} 天` };
     });
@@ -1117,21 +1150,38 @@ class Component extends DCLogic {
     const batchTypeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setBatchType(k), style: b.type===k?segActive:segIdle }));
     const batchSlotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setBatch("slot",k), style: b.slot===k?segActive:segIdle }));
     const batchCatBtns=this.CATEGORIES.map(c=>({ label:c.label, onClick:()=>this.setBatch("cat",c.key), style: (b.cat||'other')===c.key?segActive:segIdle }));
-    const scopes=[['everyday','每天'],['weekday','平日'],['weekend','週末']];
-    const scopeBtns=scopes.map(([k,label])=>({ label, onClick:()=>this.setBatch("scope",k), style: b.scope===k?segActive:segIdle }));
     const batchNeedsUrl = b.type==='video'||b.type==='audio'||b.type==='link';
-    // batch period (range): 整個暑假 / 這一週 / 只有今天
-    const bPeriod = b.period||'summer';
-    const periods=[['summer','整個暑假'],['week','這一週'],['day','只有今天']];
-    const batchPeriodBtns=periods.map(([k,label])=>({ label, onClick:()=>this.setBatch("period",k), style: bPeriod===k?segActive:segIdle }));
-    const batchShowScope = bPeriod!=='day';
     const wkN=["日","一","二","三","四","五","六"];
     const fmtMD=(d)=>`${d.getMonth()+1}/${d.getDate()}`;
     const _t=new Date();
-    let batchRangeHint, batchApplyLabel;
-    if(bPeriod==='week'){ const {from,to}=this.batchRange('week'); batchRangeHint=`會套用到本週 ${fmtMD(from)}–${fmtMD(to)}（以今天 ${fmtMD(_t)} 計算）`; batchApplyLabel="套用到這一週"; }
-    else if(bPeriod==='day'){ batchRangeHint=`只會加到今天 ${fmtMD(_t)}（週${wkN[_t.getDay()]}）這一天`; batchApplyLabel="只加到今天"; }
-    else { batchRangeHint="會套用到整個暑假（6/30–8/31）"; batchApplyLabel="套用到整個暑假"; }
+    // ---- flexible recurrence (Todoist-like) ----
+    const bFreq=b.freq||'everyday';
+    const freqs=[['everyday','每天'],['everyNDays','每隔幾天'],['weekly','選星期幾'],['weekday','平日'],['weekend','週末'],['once','只有今天']];
+    const batchFreqBtns=freqs.map(([k,label])=>({ label, onClick:()=>this.setBatch("freq",k), style: bFreq===k?segActive:segIdle }));
+    const batchShowNDays = bFreq==='everyNDays';
+    const batchShowWeekly = bFreq==='weekly';
+    const batchShowDates = bFreq!=='once';
+    const wdOrder=[[1,'一'],[2,'二'],[3,'三'],[4,'四'],[5,'五'],[6,'六'],[0,'日']];
+    const wsel=b.weekdays||{};
+    const wdChip={borderRadius:'50%',width:'34px',height:'34px',border:'1.5px solid #CBD7BC',background:'#fff',color:'#759067',cursor:'pointer',fontSize:'.9rem',padding:'0'};
+    const wdChipOn={...wdChip,background:'#8BAE76',border:'1.5px solid #8BAE76',color:'#fff'};
+    const batchWeekdayChips=wdOrder.map(([d,label])=>({ label, onClick:()=>this.toggleBatchWeekday(d), style: wsel[d]?wdChipOn:wdChip }));
+    const todayKey=this.dateKey(_t.getFullYear(),_t.getMonth(),_t.getDate());
+    const startMin=this.dateKey(this.START.getFullYear(),this.START.getMonth(),this.START.getDate());
+    const endMax=this.dateKey(this.END.getFullYear(),this.END.getMonth(),this.END.getDate());
+    const batchStartKey = b.startKey || todayKey;
+    const batchEndKey = b.endKey || endMax;
+    const _dates=this.batchDates(); const _cnt=_dates.length;
+    const _rng = _cnt ? `${fmtMD(_dates[0])}～${fmtMD(_dates[_cnt-1])}` : '—';
+    let _desc;
+    if(bFreq==='everyNDays') _desc=`每 ${Math.max(1,parseInt(b.nDays,10)||1)} 天一次`;
+    else if(bFreq==='weekly'){ const nm=wdOrder.filter(([d])=>wsel[d]).map(([d,l])=>l).join('、'); const nw=Math.max(1,parseInt(b.nWeeks,10)||1); _desc=`${nw===1?'每週':'每 '+nw+' 週'}的 週${nm||'（尚未選星期幾）'}`; }
+    else if(bFreq==='weekday') _desc='平日（週一～五）';
+    else if(bFreq==='weekend') _desc='週末（六、日）';
+    else if(bFreq==='once') _desc='只有今天';
+    else _desc='每天';
+    const batchRangeHint = bFreq==='once' ? `只會加到今天 ${fmtMD(_t)}（週${wkN[_t.getDay()]}）` : `${_desc}，共 ${_cnt} 天（${_rng}）`;
+    const batchApplyLabel = _cnt>0 ? `加入這 ${_cnt} 天` : '請先設定條件';
 
     const editing=!!s.editingId;
     const allDone = all.length>0 && dc===all.length;
@@ -1188,7 +1238,9 @@ class Component extends DCLogic {
       addBtnLabel: editing ? "儲存修改" : (nt.weekly ? "加入這一週" : "加入這一天"),
       showCancelEdit: editing,
       // batch
-      batchTypeBtns, batchSlotBtns, scopeBtns, batchPeriodBtns, batchShowScope, batchRangeHint, batchApplyLabel,
+      batchTypeBtns, batchSlotBtns, batchFreqBtns, batchShowNDays, batchShowWeekly, batchShowDates, batchWeekdayChips,
+      batchNDays:b.nDays, batchNWeeks:b.nWeeks, batchStartKey, batchEndKey, batchStartMin:startMin, batchEndMax:endMax,
+      batchRangeHint, batchApplyLabel,
       batchIcon:b.icon, batchTitle:b.title, batchDesc:b.desc, batchUrl:b.url,
       batchNeedsUrl, batchUrlPlaceholder: urlPh, batchMsg: s.batchMsg, batchHasMsg: !!s.batchMsg,
       // cloud sync
@@ -1210,6 +1262,8 @@ class Component extends DCLogic {
       // batch handlers
       onBatchIcon:(e)=>this.setBatch("icon",e.target.value), onBatchTitle:(e)=>this.setBatch("title",e.target.value),
       onBatchDesc:(e)=>this.setBatch("desc",e.target.value), onBatchUrl:(e)=>this.setBatch("url",e.target.value),
+      onBatchNDays:(e)=>this.setBatch("nDays",e.target.value), onBatchNWeeks:(e)=>this.setBatch("nWeeks",e.target.value),
+      onBatchStart:(e)=>this.setBatch("startKey",e.target.value), onBatchEnd:(e)=>this.setBatch("endKey",e.target.value),
       applyBatch:()=>this.applyBatch(),
       allowDrop:(e)=>{ if(e&&e.preventDefault) e.preventDefault(); }
     };
