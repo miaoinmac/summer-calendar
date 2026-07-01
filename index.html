@@ -83,13 +83,13 @@
     <!-- Calendar -->
     <div style="padding:0 14px 14px;">
       <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:7px;">
-        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#D69A92;padding:4px 0;letter-spacing:.1em;">日</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">一</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">二</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">三</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">四</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#B0A091;padding:4px 0;letter-spacing:.1em;">五</div>
         <div style="text-align:center;font-size:.74rem;font-weight:500;color:#94AEBE;padding:4px 0;letter-spacing:.1em;">六</div>
+        <div style="text-align:center;font-size:.74rem;font-weight:500;color:#D69A92;padding:4px 0;letter-spacing:.1em;">日</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
         <sc-for list="{{ cells }}" as="cell" hint-placeholder-count="35">
@@ -157,9 +157,9 @@
         <sc-if value="{{ batchNeedsUrl }}" hint-placeholder-val="{{ false }}">
           <input value="{{ batchUrl }}" onChange="{{ onBatchUrl }}" placeholder="{{ batchUrlPlaceholder }}" style="width:100%;border:1.5px solid #EAD3C6;border-radius:12px;padding:9px 12px;font-size:.84rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;margin-bottom:9px;letter-spacing:.02em;">
         </sc-if>
-        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">時段</div>
+        <div style="font-size:.74rem;color:#9DAE8C;margin-bottom:6px;letter-spacing:.06em;">分類</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-          <sc-for list="{{ batchSlotBtns }}" as="b" hint-placeholder-count="4">
+          <sc-for list="{{ batchCatBtns }}" as="b" hint-placeholder-count="8">
             <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
           </sc-for>
         </div>
@@ -297,9 +297,10 @@
             <div style="text-align:center;padding:18px;color:#8FA47F;font-size:.92rem;background:#EEF4E8;border:1.5px solid #D6E4C9;border-radius:16px;letter-spacing:.05em;">😌 今天沒有任務，好好玩、好好休息～</div>
           </sc-if>
 
-          <sc-for list="{{ modal.slotGroups }}" as="grp" hint-placeholder-count="0">
-            <div style="margin-bottom:2px;">
-              <div style="font-size:.76rem;font-weight:500;color:#A8978A;letter-spacing:.1em;margin:2px 2px 5px;">{{ grp.label }}</div>
+          <sc-for list="{{ modal.catGroups }}" as="grp" hint-placeholder-count="0">
+            <div style="margin-bottom:6px;">
+              <div onClick="{{ grp.onToggle }}" style="{{ grp.headStyle }}"><span>{{ grp.headLabel }}</span><span style="font-size:.9rem;color:#C9B49F;">{{ grp.chevron }}</span></div>
+              <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}">
               <sc-for list="{{ grp.tasks }}" as="task" hint-placeholder-count="0">
                 <div style="{{ task.cardStyle }}" onDragOver="{{ allowDrop }}" onDrop="{{ task.onDrop }}">
                   <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center;align-items:center;">
@@ -359,6 +360,7 @@
                   </sc-if>
                 </div>
               </sc-for>
+              </sc-if>
             </div>
           </sc-for>
 
@@ -404,10 +406,10 @@
                 <button onClick="{{ toggleDraftWeekly }}" style="{{ draftWeeklyStyle }}">{{ draftWeeklyLabel }}</button>
                 <div style="font-size:.72rem;color:#B0A091;margin:5px 2px 11px;letter-spacing:.04em;line-height:1.4;">本週任務＝這一週完成一次就好，沒完成前每天都會出現</div>
               </sc-if>
-              <sc-if value="{{ draftShowSlot }}" hint-placeholder-val="{{ true }}">
-                <div style="font-size:.76rem;color:#B0A091;margin-bottom:6px;letter-spacing:.06em;">時段（小朋友可自己調整先後）</div>
+              <sc-if value="{{ draftShowCat }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:.76rem;color:#B0A091;margin-bottom:6px;letter-spacing:.06em;">分類（在當天視窗依分類分組）</div>
                 <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;">
-                  <sc-for list="{{ slotBtns }}" as="b" hint-placeholder-count="4">
+                  <sc-for list="{{ catBtns }}" as="b" hint-placeholder-count="8">
                     <button onClick="{{ b.onClick }}" style="{{ b.style }}">{{ b.label }}</button>
                   </sc-for>
                 </div>
@@ -467,6 +469,13 @@ class Component extends DCLogic {
     this.ICON_PALETTE = ["📖","📚","✏️","📝","🔢","🔤","🌍","🔬","🎨","✂️","🎹","🎵","🎸","🎤","🏃","⚽","🏀","🏊","🚴","🤸","🧘","🧹","🧺","🛏️","🗑️","🐶","🌱","🍚","🍎","🦷","🛁","😴","⏰","🎬","🎧","🔗","🖼️","⭐","🎯","❤️"];
     this.SLOT_ORDER = ["am","pm","eve","any"];
     this.SLOT_META = { am:{label:"🌅 早上"}, pm:{label:"☀️ 下午"}, eve:{label:"🌙 晚上"}, any:{label:"🕐 隨時"} };
+    // task categories (subjects) — daily tasks are grouped by these in the day view
+    this.CATEGORIES = [
+      {key:'chinese', label:'📖 國語'}, {key:'math', label:'🔢 數學'}, {key:'english', label:'🔤 英文'},
+      {key:'science', label:'🔬 自然'}, {key:'art', label:'🎨 美勞'}, {key:'sport', label:'🏃 運動'},
+      {key:'routine', label:'🧸 常規'}, {key:'other', label:'🌟 其他'}
+    ];
+    this.CAT_DEFAULT = 'other';
     this.POMO_LEN = 25*60;
 
     this.START = new Date(2026,5,30);
@@ -510,10 +519,11 @@ class Component extends DCLogic {
       parentMode: false,
       pinPrompt: null, pinInput: "", pinError: "",
       editingId: null,
+      collapsedCats: {},
       timer: { running:false, left: this.POMO_LEN },
-      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", scope:"everyday", period:"summer" },
+      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", scope:"everyday", period:"summer" },
       batchMsg: "",
-      newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any" }
+      newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other" }
     };
   }
 
@@ -582,7 +592,7 @@ class Component extends DCLogic {
 
   buildCells(){
     const {viewYear:vy, viewMonth:vm, selectedDate, done, dayNotes, tasksByDate} = this.state;
-    const firstDay = new Date(vy, vm, 1).getDay();
+    const firstDay = (new Date(vy, vm, 1).getDay()+6)%7; // Monday-first (Mon=0 … Sun=6)
     const daysInMonth = new Date(vy, vm+1, 0).getDate();
     const cells = [];
     const hidden = {display:'none'};
@@ -675,9 +685,10 @@ class Component extends DCLogic {
   onAudioFile(e){ const f=e.target.files&&e.target.files[0]; if(!f) return;
     if(f.size > 3*1024*1024){ alert("音檔太大了（"+(f.size/1048576).toFixed(1)+" MB）。瀏覽器儲存空間有限，請改用 3MB 以內的短音檔，或直接貼音檔網址。"); e.target.value=""; return; }
     const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
-  blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", weekly:false }; }
+  blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", weekly:false }; }
+  toggleCat(key){ this.setState(s=>{ const collapsedCats={...s.collapsedCats}; collapsedCats[key]=!collapsedCats[key]; return {collapsedCats}; }); }
   // Sunday (week-start) date-key for the week containing y/m0/d
-  weekStartKey(y,m0,d){ const dt=new Date(y,m0,d); dt.setDate(dt.getDate()-dt.getDay()); return this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate()); }
+  weekStartKey(y,m0,d){ const dt=new Date(y,m0,d); dt.setDate(dt.getDate()-((dt.getDay()+6)%7)); return this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate()); } // Monday as week start
   addTaskNow(){
     const nt=this.state.newTask;
     const title=(nt.title||"").trim();
@@ -696,7 +707,7 @@ class Component extends DCLogic {
       return;
     }
     this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let arr=(tasksByDate[key]||[]).slice();
-      const dfields={...fields, slot:nt.slot||"any"};
+      const dfields={...fields, slot:nt.slot||"any", cat:nt.cat||"other"};
       if(editingId){ arr=arr.map(t=> t.id===editingId ? {...t, ...dfields} : t); }
       else { arr.push({ id:`${key}-${Date.now()}`, ...dfields }); }
       tasksByDate[key]=arr; this.save(this.dk(this.LS_TASKS),tasksByDate);
@@ -710,7 +721,7 @@ class Component extends DCLogic {
   editTask(id){
     const key=this.state.selectedDate;
     const t=(this.state.tasksByDate[key]||[]).find(x=>x.id===id); if(!t) return;
-    this.setState({ editingId:id, newTask:{ type:t.type, icon:t.icon||this.TYPE_ICON[t.type]||"📌", title:t.title||"", desc:t.desc||"", url:t.url||"", slot:t.slot||"any" } });
+    this.setState({ editingId:id, newTask:{ type:t.type, icon:t.icon||this.TYPE_ICON[t.type]||"📌", title:t.title||"", desc:t.desc||"", url:t.url||"", slot:t.slot||"any", cat:t.cat||"other", weekly:false } });
     // the edit form lives at the bottom of the modal — scroll it into view so it's obvious
     setTimeout(()=>{ const el=document.getElementById("dc-task-form"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }, 60);
   }
@@ -726,8 +737,8 @@ class Component extends DCLogic {
     const key=this.state.selectedDate;
     this.setState(s=>{ const tasksByDate={...s.tasksByDate}; const arr=(tasksByDate[key]||[]).slice();
       const i=arr.findIndex(t=>t.id===id); if(i<0) return {};
-      const slot=arr[i].slot||"any"; let j=i+dir;
-      while(j>=0&&j<arr.length&&((arr[j].slot||"any")!==slot)) j+=dir;
+      const cat=arr[i].cat||"other"; let j=i+dir;
+      while(j>=0&&j<arr.length&&((arr[j].cat||"other")!==cat)) j+=dir;
       if(j<0||j>=arr.length) return {};
       const tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; tasksByDate[key]=arr; this.save(this.dk(this.LS_TASKS),tasksByDate);
       return {tasksByDate}; });
@@ -744,9 +755,9 @@ class Component extends DCLogic {
     this.setState(s=>{ const tbd={...s.tasksByDate}; const arr=(tbd[key]||[]).slice();
       const di=arr.findIndex(t=>t.id===dragId), ti=arr.findIndex(t=>t.id===targetId);
       if(di<0||ti<0) return {};
-      const targetSlot=arr[ti].slot||"any";
+      const targetCat=arr[ti].cat||"other";
       const [moved]=arr.splice(di,1);
-      moved.slot=targetSlot;
+      moved.cat=targetCat;
       const nti=arr.findIndex(t=>t.id===targetId);
       arr.splice(nti,0,moved);
       tbd[key]=arr; this.save(this.dk(this.LS_TASKS),tbd);
@@ -763,7 +774,7 @@ class Component extends DCLogic {
     const t=new Date(); const today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
     let from, to;
     if(period==="day"){ from=new Date(today); to=new Date(today); }
-    else if(period==="week"){ from=new Date(today); from.setDate(from.getDate()-from.getDay()); to=new Date(from); to.setDate(to.getDate()+6); }
+    else if(period==="week"){ from=new Date(today); from.setDate(from.getDate()-((from.getDay()+6)%7)); to=new Date(from); to.setDate(to.getDate()+6); }
     else { from=new Date(this.START); to=new Date(this.END); }
     if(from<this.START) from=new Date(this.START);
     if(to>this.END) to=new Date(this.END);
@@ -774,7 +785,7 @@ class Component extends DCLogic {
     const period=b.period||"summer";
     const {from,to}=this.batchRange(period);
     this.setState(s=>{ const tasksByDate={...s.tasksByDate}; let count=0;
-      const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any" };
+      const fields={ type:b.type, icon:(b.icon||this.TYPE_ICON[b.type]||"📌"), title, desc:(b.desc||"").trim(), url:(b.url||"").trim(), slot:b.slot||"any", cat:b.cat||"other" };
       for(let dt=new Date(from); dt<=to; dt.setDate(dt.getDate()+1)){
         const dow=dt.getDay();
         const ok = period==="day" ? true : (b.scope==="everyday" || (b.scope==="weekday"&&dow>=1&&dow<=5) || (b.scope==="weekend"&&(dow===0||dow===6)));
@@ -836,7 +847,7 @@ class Component extends DCLogic {
       const editing = this.state.editingId===t.id;
       const pomoN = this.state.taskPomos[t.id]||0;
       return { id:t.id, icon:t.icon||"📌", title:t.title, desc:t.desc||"", hasDesc:!!(t.desc&&t.desc.trim()), audioEl, imgEl, videoEl,
-        url:t.url||"", slot:t.slot||"any", isVideo:t.type==='video', hasVideoEmbed:!!embed, isVideoLink:(t.type==='video'&&!embed&&!!t.url), isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
+        url:t.url||"", slot:t.slot||"any", cat:t.cat||"other", isVideo:t.type==='video', hasVideoEmbed:!!embed, isVideoLink:(t.type==='video'&&!embed&&!!t.url), isAudio:t.type==='audio', isLink:t.type==='link', isImage:t.type==='image', isTask:t.type==='task',
         showCheckRow:(t.type==='video'||t.type==='audio'||t.type==='link'||t.type==='image'),
         cardStyle: editing ? {...(isDone?cardDone:cardBase), border:'2px solid #D89B6E'} : (isDone?cardDone:cardBase),
         titleStyle, chkStyle:chk, bigChkStyle:bigChk, checkLabel:cl,
@@ -850,9 +861,21 @@ class Component extends DCLogic {
 
     const arrowBase={width:'24px',height:'22px',borderRadius:'7px',border:'1.5px solid #EAD3C6',background:'#fff',cursor:'pointer',fontSize:'.7rem',color:'#B08E72',lineHeight:'1',padding:'0',display:'flex',alignItems:'center',justifyContent:'center'};
     const arrowOff={...arrowBase,opacity:'.3',cursor:'default'};
-    const slotGroups=this.SLOT_ORDER.map(sk=>({ slotKey:sk, label:this.SLOT_META[sk].label, tasks: taskVals.filter(tv=>tv.slot===sk) }))
+    // group daily tasks by category (subject); each group is collapsible
+    const catGroups=this.CATEGORIES.map(c=>({ key:c.key, catLabel:c.label, tasks: taskVals.filter(tv=>(tv.cat||'other')===c.key) }))
       .filter(g=>g.tasks.length>0);
-    slotGroups.forEach(g=>{ g.multi=g.tasks.length>1; g.tasks.forEach((tv,idx)=>{ tv.upStyle = idx>0?arrowBase:arrowOff; tv.downStyle = idx<g.tasks.length-1?arrowBase:arrowOff; }); });
+    catGroups.forEach(g=>{
+      const gd=g.tasks.filter(tv=>done[tv.id]).length;
+      const collapsed=!!this.state.collapsedCats[g.key];
+      g.collapsed=collapsed; g.expanded=!collapsed;
+      g.allDone=(gd===g.tasks.length);
+      g.headLabel=`${g.catLabel}　${g.allDone?'⭐':gd+'/'+g.tasks.length}`;
+      g.chevron=collapsed?'▸':'▾';
+      g.headStyle={display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',userSelect:'none',background:'#F6ECE2',border:'1.5px solid #EFE0D2',borderRadius:'12px',padding:'8px 13px',marginBottom:collapsed?'0':'8px',fontSize:'.86rem',fontWeight:'500',color:'#B07F66',letterSpacing:'.06em'};
+      g.onToggle=()=>this.toggleCat(g.key);
+      g.multi=g.tasks.length>1;
+      g.tasks.forEach((tv,idx)=>{ tv.upStyle = idx>0?arrowBase:arrowOff; tv.downStyle = idx<g.tasks.length-1?arrowBase:arrowOff; });
+    });
 
     // ---- weekly tasks (do once anytime this week; appear every day until done) ----
     const wkKey=this.weekStartKey(y,m-1,d);
@@ -874,7 +897,7 @@ class Component extends DCLogic {
         cardStyle:isDone?baseDone:base, titleStyle, chkStyle:chk, bigChkStyle:bigChk, checkLabel:cl,
         parentMode, onToggle:()=>this.toggleDone(t.id), onDelete:()=>this.deleteWeeklyTask(t.id, wkKey) };
     });
-    const wsd=new Date(y,m-1,d); wsd.setDate(wsd.getDate()-wsd.getDay()); const wed=new Date(wsd); wed.setDate(wed.getDate()+6);
+    const wsd=new Date(y,m-1,d); wsd.setDate(wsd.getDate()-((wsd.getDay()+6)%7)); const wed=new Date(wsd); wed.setDate(wed.getDate()+6);
     const weeklyDoneN=weeklyVals.filter(v=>done[v.id]).length;
 
     return {
@@ -892,7 +915,7 @@ class Component extends DCLogic {
       noteEmptyRead: !parentMode && noteLines.length===0,
       scheduleShow: parentMode || noteLines.length>0,
       empty: totalN===0,
-      slotGroups,
+      catGroups,
       dayProgWrapStyle: totalN>0 ? {display:'flex',alignItems:'center',gap:'8px',background:'#F6ECE2',border:'1.5px solid #EAD3C6',borderRadius:'14px',padding:'7px 13px',marginBottom:'11px',flexWrap:'wrap'} : {display:'none'},
       dayProgText: `${doneN} / ${totalN}`,
       dayProgNote: doneN===totalN && totalN>0 ? "全部完成，太棒了！🎉" : `還有 ${totalN-doneN} 項`
@@ -930,11 +953,13 @@ class Component extends DCLogic {
 
     const slots=[['am','🌅 早上'],['pm','☀️ 下午'],['eve','🌙 晚上'],['any','🕐 隨時']];
     const slotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setDraft("slot",k), style: nt.slot===k?segActive:segIdle }));
+    const catBtns=this.CATEGORIES.map(c=>({ label:c.label, onClick:()=>this.setDraft("cat",c.key), style: (nt.cat||'other')===c.key?segActive:segIdle }));
 
     // batch
     const b=s.batch;
     const batchTypeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setBatchType(k), style: b.type===k?segActive:segIdle }));
     const batchSlotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setBatch("slot",k), style: b.slot===k?segActive:segIdle }));
+    const batchCatBtns=this.CATEGORIES.map(c=>({ label:c.label, onClick:()=>this.setBatch("cat",c.key), style: (b.cat||'other')===c.key?segActive:segIdle }));
     const scopes=[['everyday','每天'],['weekday','平日'],['weekend','週末']];
     const scopeBtns=scopes.map(([k,label])=>({ label, onClick:()=>this.setBatch("scope",k), style: b.scope===k?segActive:segIdle }));
     const batchNeedsUrl = b.type==='video'||b.type==='audio'||b.type==='link';
@@ -994,9 +1019,9 @@ class Component extends DCLogic {
       draftUrlPlaceholder: urlPh, iconPalette, batchIconPalette,
       draftHasImg: nt.type==='image' && !!nt.url,
       draftImgEl: (nt.type==='image' && nt.url) ? React.createElement('img',{src:nt.url,alt:'',style:{display:'block',maxWidth:'120px',borderRadius:'12px',marginTop:'8px',border:'1.5px solid #EFE0D2'}}) : null,
-      typeBtns, slotBtns,
+      typeBtns, slotBtns, catBtns, batchCatBtns,
       draftCanWeekly: !editing,
-      draftShowSlot: !nt.weekly,
+      draftShowCat: !nt.weekly,
       draftWeeklyStyle: nt.weekly
         ? {width:'100%',background:'#E0B24E',border:'none',color:'#fff',borderRadius:'12px',padding:'9px',fontSize:'.86rem',cursor:'pointer',letterSpacing:'.05em',boxShadow:'0 3px 0 #C99A3C'}
         : {width:'100%',background:'#fff',border:'1.5px solid #EAD3C6',color:'#9B8979',borderRadius:'12px',padding:'9px',fontSize:'.86rem',cursor:'pointer',letterSpacing:'.05em'},
