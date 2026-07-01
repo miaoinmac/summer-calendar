@@ -201,6 +201,16 @@
       </div>
     </sc-if>
 
+    <!-- Backup / restore (parent) -->
+    <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:0;background:#EAF0EF;border:1.5px dashed #BFD2CC;border-radius:22px;padding:16px 18px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#5E8378;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">💾 備份 / 還原</div>
+        <div style="font-size:.74rem;color:#8FA79E;margin-bottom:11px;letter-spacing:.05em;line-height:1.5;">資料存在這個瀏覽器裡。建議常按「備份」存成檔案(可放到雲端硬碟)，換裝置或被清空時用「還原」救回。</div>
+        <button onClick="{{ exportData }}" style="width:100%;background:#7FA895;color:#fff;border:none;border-radius:13px;padding:10px;font-size:.9rem;font-weight:500;cursor:pointer;letter-spacing:.08em;margin-bottom:8px;box-shadow:0 3px 0 #6E9583;">⬇️ 備份到檔案</button>
+        <label style="display:block;text-align:center;background:#fff;border:1.5px solid #BFD2CC;color:#5E8378;border-radius:13px;padding:10px;font-size:.9rem;cursor:pointer;letter-spacing:.08em;">⬆️ 從檔案還原<input type="file" accept="application/json,.json" onChange="{{ onImportFile }}" style="display:none;"></label>
+      </div>
+    </sc-if>
+
      </div>
     </div>
 
@@ -540,6 +550,29 @@ class Component extends DCLogic {
   isToday(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
   allTasks(){ return Object.values(this.state.tasksByDate).flat(); }
   save(k,v){ try{ localStorage.setItem(k, typeof v==="string"?v:JSON.stringify(v)); }catch(e){} }
+
+  // ---- backup / restore (all app data → a file, and back) ----
+  exportData(){
+    const dump={};
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.indexOf("summer_")===0) dump[k]=localStorage.getItem(k); }
+    const blob=new Blob([JSON.stringify({app:"summer-calendar",ts:Date.now(),data:dump},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    const t=new Date(); a.href=url; a.download=`暑假行事曆備份-${this.dateKey(t.getFullYear(),t.getMonth(),t.getDate())}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
+  importData(e){
+    const f=e.target.files&&e.target.files[0]; if(!f){ return; }
+    const r=new FileReader();
+    r.onload=()=>{ try{
+      const obj=JSON.parse(r.result); const data=(obj&&obj.data)?obj.data:obj;
+      const keys=Object.keys(data||{}).filter(k=>k.indexOf("summer_")===0);
+      if(!keys.length){ alert("這個檔案看起來不是行事曆備份檔。"); return; }
+      if(!confirm(`要用這個備份還原嗎？\n目前這個瀏覽器裡的內容會被覆蓋（共 ${keys.length} 項）。`)){ return; }
+      keys.forEach(k=>{ try{ localStorage.setItem(k, data[k]); }catch(_){} });
+      alert("✅ 還原完成！將重新整理。"); location.reload();
+    }catch(err){ alert("讀取失敗："+err.message); } };
+    r.readAsText(f); e.target.value="";
+  }
 
   // ---- per-child storage ----
   // every child stores its own copy under "<base>_<childId>"; PIN stays family-wide.
@@ -995,6 +1028,7 @@ class Component extends DCLogic {
     return {
       parentMode: s.parentMode,
       childChips, childRows, addChild:()=>this.addChild(),
+      exportData:()=>this.exportData(), onImportFile:(e)=>this.importData(e),
       subtitle: s.parentMode ? "家長模式：可新增任務、排行程、寫家規" : "點一下日期，看看今天要做什麼 ✨",
       doneCount: dc, totalCount: all.length,
       progressWidth: all.length ? (dc/all.length*100)+"%" : "0%",
