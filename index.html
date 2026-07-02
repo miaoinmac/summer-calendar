@@ -7,7 +7,7 @@
 <script src="./vendor/react.production.min.js"></script>
 <script src="./vendor/react-dom.production.min.js"></script>
 <script src="./support.js"></script>
-<title>🌻 暑假行事曆</title>
+<title>🌻 我的行事曆</title>
 </head>
 <body>
 <x-dc>
@@ -33,7 +33,7 @@
     <!-- Header -->
     <div style="padding:22px 22px 18px;background:linear-gradient(180deg,#F6E3DA,#FBEFE7);border-bottom:2px dashed #EAD3C6;display:flex;justify-content:space-between;align-items:center;gap:12px;">
       <div>
-        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1.45rem;color:#B07F66;letter-spacing:.14em;display:flex;align-items:center;gap:9px;">🌻 暑假行事曆</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1.45rem;color:#B07F66;letter-spacing:.14em;display:flex;align-items:center;gap:9px;">🌻 我的行事曆</div>
         <div style="font-size:.78rem;color:#A8978A;margin-top:4px;letter-spacing:.08em;">{{ subtitle }}</div>
       </div>
       <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
@@ -210,6 +210,22 @@
           </div>
         </sc-for>
         <button onClick="{{ addChild }}" style="width:100%;background:#fff;border:1.5px solid #EAD3C6;color:#B07F66;border-radius:13px;padding:9px;font-size:.88rem;cursor:pointer;letter-spacing:.08em;margin-top:3px;">➕ 新增小孩</button>
+      </div>
+    </sc-if>
+
+    <!-- Manage categories (parent) -->
+    <sc-if value="{{ parentMode }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:0;background:#F1EEF4;border:1.5px dashed #CFC3D8;border-radius:22px;padding:16px 18px;">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-weight:500;font-size:1rem;color:#7A6A8A;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:7px;">🏷️ 管理分類</div>
+        <div style="font-size:.74rem;color:#9C8FA8;margin-bottom:11px;letter-spacing:.05em;">任務在當天視窗會依分類分組。可自己命名（例：珠心算、圍棋、鋼琴）。</div>
+        <sc-for list="{{ catRows }}" as="c" hint-placeholder-count="8">
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <input value="{{ c.emoji }}" onChange="{{ c.onEmoji }}" maxlength="4" style="width:48px;text-align:center;border:1.5px solid #D8CBE0;border-radius:12px;padding:8px 4px;font-size:1.1rem;outline:none;background:#fff;box-sizing:border-box;">
+            <input value="{{ c.name }}" onChange="{{ c.onName }}" placeholder="分類名稱" style="flex:1;min-width:0;border:1.5px solid #D8CBE0;border-radius:12px;padding:8px 11px;font-size:.9rem;color:#6E6155;outline:none;background:#fff;box-sizing:border-box;letter-spacing:.04em;">
+            <button onClick="{{ c.onDelete }}" style="{{ c.delStyle }}">🗑</button>
+          </div>
+        </sc-for>
+        <button onClick="{{ addCategory }}" style="width:100%;background:#fff;border:1.5px solid #D8CBE0;color:#7A6A8A;border-radius:13px;padding:9px;font-size:.88rem;cursor:pointer;letter-spacing:.08em;margin-top:3px;">➕ 新增分類</button>
       </div>
     </sc-if>
 
@@ -508,16 +524,18 @@ class Component extends DCLogic {
     this.SLOT_ORDER = ["am","pm","eve","any"];
     this.SLOT_META = { am:{label:"🌅 早上"}, pm:{label:"☀️ 下午"}, eve:{label:"🌙 晚上"}, any:{label:"🕐 隨時"} };
     // task categories (subjects) — daily tasks are grouped by these in the day view
-    this.CATEGORIES = [
-      {key:'chinese', label:'📖 國語'}, {key:'math', label:'🔢 數學'}, {key:'english', label:'🔤 英文'},
-      {key:'science', label:'🔬 自然'}, {key:'art', label:'🎨 美勞'}, {key:'sport', label:'🏃 運動'},
-      {key:'routine', label:'🧸 常規'}, {key:'other', label:'🌟 其他'}
+    this.DEFAULT_CATEGORIES = [
+      {key:'chinese', emoji:'📖', name:'國語'}, {key:'math', emoji:'🔢', name:'數學'}, {key:'english', emoji:'🔤', name:'英文'},
+      {key:'science', emoji:'🔬', name:'自然'}, {key:'art', emoji:'🎨', name:'美勞'}, {key:'sport', emoji:'🏃', name:'運動'},
+      {key:'routine', emoji:'🧸', name:'常規'}, {key:'other', emoji:'🌟', name:'其他'}
     ];
     this.CAT_DEFAULT = 'other';
+    this.LS_CATS = "summer_categories_v1"; // custom category list (family-wide)
     this.POMO_LEN = 25*60;
 
-    this.START = new Date(2026,5,30);
-    this.END   = new Date(2026,7,31);
+    // usable range spans several school years (not just one summer)
+    this.START = new Date(2025,0,1);
+    this.END   = new Date(2031,11,31);
     this.LS_DONE  = "summer_cal_done_v3";
     this.LS_NOTES = "summer_day_notes_v3";
     this.LS_TASKS = "summer_tasks_v1";
@@ -546,6 +564,10 @@ class Component extends DCLogic {
     }
     if(!curChild || !children.some(c=>c.id===curChild)) curChild = children[0].id;
 
+    let categories=null;
+    try { categories = JSON.parse(localStorage.getItem(this.LS_CATS) || "null"); } catch(e){}
+    if(!categories || !categories.length){ categories = JSON.parse(JSON.stringify(this.DEFAULT_CATEGORIES)); }
+
     let pin="", pomos={};
     try { pin = localStorage.getItem(this.LS_PIN) || ""; } catch(e){}
     try { pomos = JSON.parse(localStorage.getItem(this.LS_POMO) || "{}"); } catch(e){}
@@ -559,17 +581,20 @@ class Component extends DCLogic {
 
     const t = new Date();
     const inR = this.inRange(t.getFullYear(), t.getMonth(), t.getDate());
+    const bStart = this.dateKey(t.getFullYear(), t.getMonth(), t.getDate());
+    let _be = new Date(t.getFullYear(), t.getMonth(), t.getDate()); _be.setDate(_be.getDate()+180); if(_be>this.END) _be=new Date(this.END);
+    const bEnd = this.dateKey(_be.getFullYear(), _be.getMonth(), _be.getDate());
     this.state = {
       viewYear: t.getFullYear(), viewMonth: t.getMonth(),
       selectedDate: inR ? this.dateKey(t.getFullYear(),t.getMonth(),t.getDate()) : null,
-      children, currentChild: curChild,
+      children, currentChild: curChild, categories,
       done, dayNotes, tasksByDate, rules, pin, pomos, taskPomos, weeklyTasks,
       parentMode: false,
       pinPrompt: null, pinInput: "", pinError: "",
       editingId: null,
       collapsedCats: {},
       timer: { running:false, left: this.POMO_LEN },
-      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", freq:"everyday", nDays:2, weekdays:{}, nWeeks:1, startKey:"", endKey:"" },
+      batch: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", freq:"everyday", nDays:2, weekdays:{}, nWeeks:1, startKey:bStart, endKey:bEnd },
       batchMsg: "",
       newTask: { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other" },
       syncUrlInput: this.SYNC_URL, syncSecretInput: this.SYNC_SECRET,
@@ -693,7 +718,7 @@ class Component extends DCLogic {
     for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.indexOf("summer_")===0) dump[k]=localStorage.getItem(k); }
     const blob=new Blob([JSON.stringify({app:"summer-calendar",ts:Date.now(),data:dump},null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a");
-    const t=new Date(); a.href=url; a.download=`暑假行事曆備份-${this.dateKey(t.getFullYear(),t.getMonth(),t.getDate())}.json`;
+    const t=new Date(); a.href=url; a.download=`我的行事曆備份-${this.dateKey(t.getFullYear(),t.getMonth(),t.getDate())}.json`;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
   }
   importData(e){
@@ -856,6 +881,16 @@ class Component extends DCLogic {
     const r=new FileReader(); r.onload=()=>this.setDraft("url", r.result); r.readAsDataURL(f); }
   blankDraft(){ return { type:"task", icon:"✏️", title:"", desc:"", url:"", slot:"any", cat:"other", weekly:false }; }
   toggleCat(key){ this.setState(s=>{ const collapsedCats={...s.collapsedCats}; collapsedCats[key]=!collapsedCats[key]; return {collapsedCats}; }); }
+  // ---- custom categories (family-wide, editable) ----
+  catLabelOf(key){ const c=(this.state.categories||[]).find(x=>x.key===key); return c ? `${c.emoji||'🏷️'} ${c.name||''}`.trim() : '🌟 其他'; }
+  addCategory(){ this.setState(s=>{ const key="cat"+Date.now(); const categories=[...s.categories,{key,emoji:'🏷️',name:'新分類'}]; this.save(this.LS_CATS,categories); return {categories}; }); }
+  renameCategory(key,val){ this.setState(s=>{ const categories=s.categories.map(c=>c.key===key?{...c,name:val}:c); this.save(this.LS_CATS,categories); return {categories}; }); }
+  setCategoryEmoji(key,val){ const e=(val||'').trim(); this.setState(s=>{ const categories=s.categories.map(c=>c.key===key?{...c,emoji:(e||c.emoji)}:c); this.save(this.LS_CATS,categories); return {categories}; }); }
+  deleteCategory(key){
+    if(this.state.categories.length<=1) return;
+    if(!confirm("刪除這個分類？原本屬於它的任務會自動歸到「其他」。")) return;
+    this.setState(s=>{ const categories=s.categories.filter(c=>c.key!==key); this.save(this.LS_CATS,categories); return {categories}; });
+  }
   // Sunday (week-start) date-key for the week containing y/m0/d
   weekStartKey(y,m0,d){ const dt=new Date(y,m0,d); dt.setDate(dt.getDate()-((dt.getDay()+6)%7)); return this.dateKey(dt.getFullYear(),dt.getMonth(),dt.getDate()); } // Monday as week start
   addTaskNow(){
@@ -1052,9 +1087,14 @@ class Component extends DCLogic {
     const arrowBase={width:'24px',height:'22px',borderRadius:'7px',border:'1.5px solid #EAD3C6',background:'#fff',cursor:'pointer',fontSize:'.7rem',color:'#B08E72',lineHeight:'1',padding:'0',display:'flex',alignItems:'center',justifyContent:'center'};
     const arrowOff={...arrowBase,opacity:'.3',cursor:'default'};
     // group daily tasks by category (subject); each group is collapsible
-    const catGroups=this.CATEGORIES.map(c=>({ key:c.key, catLabel:c.label, tasks: taskVals.filter(tv=>(tv.cat||'other')===c.key) }))
-      .filter(g=>g.tasks.length>0);
-    catGroups.forEach(g=>{
+    const _cats=this.state.categories||this.DEFAULT_CATEGORIES;
+    const _knownKeys=new Set(_cats.map(c=>c.key));
+    const catGroups=_cats.map(c=>({ key:c.key, catLabel:`${c.emoji||'🏷️'} ${c.name||''}`.trim(), tasks: taskVals.filter(tv=>(tv.cat||'other')===c.key) }));
+    // tasks whose category was deleted -> fold into 「其他」(or a fallback group)
+    const _orphans=taskVals.filter(tv=>!_knownKeys.has(tv.cat||'other'));
+    if(_orphans.length){ const og=catGroups.find(g=>g.key==='other'); if(og){ og.tasks=og.tasks.concat(_orphans); } else { catGroups.push({key:'__orphan', catLabel:'🌟 其他', tasks:_orphans}); } }
+    const catGroupsFiltered=catGroups.filter(g=>g.tasks.length>0);
+    catGroupsFiltered.forEach(g=>{
       const gd=g.tasks.filter(tv=>done[tv.id]).length;
       const collapsed=!!this.state.collapsedCats[g.key];
       g.collapsed=collapsed; g.expanded=!collapsed;
@@ -1105,7 +1145,7 @@ class Component extends DCLogic {
       noteEmptyRead: !parentMode && noteLines.length===0,
       scheduleShow: parentMode || noteLines.length>0,
       empty: totalN===0,
-      catGroups,
+      catGroups: catGroupsFiltered,
       dayProgWrapStyle: totalN>0 ? {display:'flex',alignItems:'center',gap:'8px',background:'#F6ECE2',border:'1.5px solid #EAD3C6',borderRadius:'14px',padding:'7px 13px',marginBottom:'11px',flexWrap:'wrap'} : {display:'none'},
       dayProgText: `${doneN} / ${totalN}`,
       dayProgNote: doneN===totalN && totalN>0 ? "全部完成，太棒了！🎉" : `還有 ${totalN-doneN} 項`
@@ -1143,13 +1183,13 @@ class Component extends DCLogic {
 
     const slots=[['am','🌅 早上'],['pm','☀️ 下午'],['eve','🌙 晚上'],['any','🕐 隨時']];
     const slotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setDraft("slot",k), style: nt.slot===k?segActive:segIdle }));
-    const catBtns=this.CATEGORIES.map(c=>({ label:c.label, onClick:()=>this.setDraft("cat",c.key), style: (nt.cat||'other')===c.key?segActive:segIdle }));
+    const catBtns=(s.categories||[]).map(c=>({ label:`${c.emoji||'🏷️'} ${c.name||''}`.trim(), onClick:()=>this.setDraft("cat",c.key), style: (nt.cat||'other')===c.key?segActive:segIdle }));
 
     // batch
     const b=s.batch;
     const batchTypeBtns=types.map(([k,label])=>({ label, onClick:()=>this.setBatchType(k), style: b.type===k?segActive:segIdle }));
     const batchSlotBtns=slots.map(([k,label])=>({ label, onClick:()=>this.setBatch("slot",k), style: b.slot===k?segActive:segIdle }));
-    const batchCatBtns=this.CATEGORIES.map(c=>({ label:c.label, onClick:()=>this.setBatch("cat",c.key), style: (b.cat||'other')===c.key?segActive:segIdle }));
+    const batchCatBtns=(s.categories||[]).map(c=>({ label:`${c.emoji||'🏷️'} ${c.name||''}`.trim(), onClick:()=>this.setBatch("cat",c.key), style: (b.cat||'other')===c.key?segActive:segIdle }));
     const batchNeedsUrl = b.type==='video'||b.type==='audio'||b.type==='link';
     const wkN=["日","一","二","三","四","五","六"];
     const fmtMD=(d)=>`${d.getMonth()+1}/${d.getDate()}`;
@@ -1198,10 +1238,15 @@ class Component extends DCLogic {
     const childRows=s.children.map(c=>({ emoji:c.emoji||"", name:c.name||"",
       onEmoji:(e)=>this.setChildEmoji(c.id,e.target.value), onName:(e)=>this.renameChild(c.id,e.target.value),
       onDelete: canDelChild?(()=>this.deleteChild(c.id)):(()=>{}), delStyle: canDelChild?delChild:delChildOff }));
+    const canDelCat=(s.categories||[]).length>1;
+    const catRows=(s.categories||[]).map(c=>({ emoji:c.emoji||"", name:c.name||"",
+      onEmoji:(e)=>this.setCategoryEmoji(c.key,e.target.value), onName:(e)=>this.renameCategory(c.key,e.target.value),
+      onDelete: canDelCat?(()=>this.deleteCategory(c.key)):(()=>{}), delStyle: canDelCat?delChild:delChildOff }));
 
     return {
       parentMode: s.parentMode,
       childChips, childRows, addChild:()=>this.addChild(),
+      catRows, addCategory:()=>this.addCategory(),
       exportData:()=>this.exportData(), onImportFile:(e)=>this.importData(e),
       subtitle: s.parentMode ? "家長模式：可新增任務、排行程、寫家規" : "點一下日期，看看今天要做什麼 ✨",
       doneCount: dc, totalCount: all.length,
